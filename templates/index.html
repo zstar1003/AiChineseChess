@@ -9,7 +9,6 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>AI象棋对战系统</h1>
             <div class="status-bar">
                 <div id="connection-status">连接状态: 连接中...</div>
                 <div id="game-status">游戏状态: 等待开始</div>
@@ -57,6 +56,20 @@
                     </div>
                 </div>
 
+            </div>
+
+            <!-- 中间棋盘区域 -->
+            <div class="chess-board-section">
+                <div class="current-player-info">
+                    <div id="current-player-text">当前轮到红方执棋</div>
+                </div>
+                <div class="board-container">
+                    <canvas id="chess-board" width="600" height="650"></canvas>
+                </div>
+            </div>
+
+            <!-- 右侧信息面板 -->
+            <div class="info-panel">
                 <div class="panel-section">
                     <h3>对战统计</h3>
                     <div class="stats">
@@ -74,77 +87,23 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 中间棋盘区域 -->
-            <div class="chess-board-section">
-                <div class="player-info player-black">
-                    <div class="player-name">黑方</div>
-                    <div id="black-thinking" class="thinking-indicator" style="display:none;">思考中...</div>
-                </div>
-
-                <div class="board-container">
-                    <canvas id="chess-board" width="520" height="570"></canvas>
-                </div>
-
-                <div class="player-info player-red">
-                    <div class="player-name">红方</div>
-                    <div id="red-thinking" class="thinking-indicator" style="display:none;">思考中...</div>
-                </div>
-
-                <div class="last-move-info">
-                    <div id="last-move-text">等待开始中国象棋对战...</div>
-                </div>
-            </div>
-
-            <!-- 右侧信息面板 -->
-            <div class="info-panel">
                 <div class="panel-section">
-                    <h3>思考过程</h3>
-                    <div id="thinking-process" class="thinking-content">
-                        <p>等待模型开始思考...</p>
+                    <h3>黑方思考</h3>
+                    <div id="black-thinking-process" class="thinking-content">
+                        <p>等待黑方开始思考...</p>
                     </div>
                 </div>
 
                 <div class="panel-section">
-                    <h3>局面评估</h3>
-                    <div class="evaluation">
-                        <div class="eval-bar">
-                            <div class="eval-fill" style="width: 50%;"></div>
-                        </div>
-                        <div class="eval-text">
-                            <span>红方</span>
-                            <span class="eval-value">均势</span>
-                            <span>黑方</span>
-                        </div>
+                    <h3>红方思考</h3>
+                    <div id="red-thinking-process" class="thinking-content">
+                        <p>等待红方开始思考...</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 底部面板 -->
-        <div class="bottom-panel">
-            <div class="move-history">
-                <h3>棋谱记录</h3>
-                <div id="move-history">
-                    <p>暂无棋谱记录</p>
-                </div>
-            </div>
-
-            <div class="battle-log">
-                <h3>对战日志</h3>
-                <div id="battle-log">
-                    <p>等待对战开始...</p>
-                </div>
-            </div>
-
-            <div class="game-result">
-                <h3>对战结果</h3>
-                <div id="game-result">
-                    <p>对战尚未结束</p>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- 加载遮罩 -->

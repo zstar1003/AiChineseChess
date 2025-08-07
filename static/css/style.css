@@ -173,10 +173,39 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     background: rgba(255, 255, 255, 0.95);
     border-radius: 10px;
     padding: 20px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    min-height: calc(100vh - 120px);
+}
+
+.current-player-info {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#current-player-text {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2c3e50;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 12px 24px;
+    border-radius: 25px;
+    border: 2px solid #3498db;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+#current-player-text.red-turn {
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+#current-player-text.black-turn {
+    border-color: #2c3e50;
+    color: #2c3e50;
 }
 
 .board-container {

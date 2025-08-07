@@ -8,16 +8,30 @@ let gameState = {
     boardState: null
 };
 
+// 更新当前执棋方显示
+function updateCurrentPlayer(player) {
+    const currentPlayerText = document.getElementById('current-player-text');
+    if (currentPlayerText) {
+        if (player === 'red') {
+            currentPlayerText.textContent = '当前轮到红方执棋';
+            currentPlayerText.className = 'red-turn';
+        } else {
+            currentPlayerText.textContent = '当前轮到黑方执棋';
+            currentPlayerText.className = 'black-turn';
+        }
+    }
+}
+
 // 中国象棋棋盘渲染器
 class ChessBoardRenderer {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
         
-        // 标准中国象棋棋盘尺寸比例 (9:10)
-        this.boardWidth = 450;   // 9列
-        this.boardHeight = 500;  // 10行
-        this.margin = 35;
+        // 增大的中国象棋棋盘尺寸比例 (9:10)
+        this.boardWidth = 520;   // 9列
+        this.boardHeight = 580;  // 10行
+        this.margin = 40;
         
         this.canvas.width = this.boardWidth + this.margin * 2;
         this.canvas.height = this.boardHeight + this.margin * 2;
