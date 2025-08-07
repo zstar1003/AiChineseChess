@@ -22,6 +22,98 @@ function updateCurrentPlayer(player) {
     }
 }
 
+// 添加思考过程到指定的思考框
+function addThinkingProcess(player, message) {
+    const isRed = player === 'red' || player.includes('红方') || player.includes('OpenAI') || player.includes('GPT');
+    const thinkingBoxId = isRed ? 'red-thinking-process' : 'black-thinking-process';
+    const thinkingBox = document.getElementById(thinkingBoxId);
+    
+    if (thinkingBox) {
+        // 创建思考项
+        const thinkingItem = document.createElement('div');
+        thinkingItem.className = `thinking-item ${isRed ? 'red-thinking' : 'black-thinking'}`;
+        
+        // 添加时间戳
+        const timestamp = document.createElement('div');
+        timestamp.className = 'thinking-timestamp';
+        timestamp.textContent = new Date().toLocaleTimeString();
+        
+        // 添加思考内容
+        const thinkingText = document.createElement('div');
+        thinkingText.className = 'thinking-text';
+        thinkingText.textContent = message;
+        
+        thinkingItem.appendChild(timestamp);
+        thinkingItem.appendChild(thinkingText);
+        
+        // 如果是第一条消息，清空默认文本
+        if (thinkingBox.innerHTML.includes('等待') || thinkingBox.innerHTML.includes('开始思考')) {
+            thinkingBox.innerHTML = '';
+        }
+        
+        thinkingBox.appendChild(thinkingItem);
+        
+        // 自动滚动到底部
+        thinkingBox.scrollTop = thinkingBox.scrollHeight;
+    }
+}
+
+// 清空思考过程
+function clearThinkingProcess(player) {
+    const isRed = player === 'red' || player.includes('红方') || player.includes('OpenAI') || player.includes('GPT');
+    const thinkingBoxId = isRed ? 'red-thinking-process' : 'black-thinking-process';
+    const thinkingBox = document.getElementById(thinkingBoxId);
+    
+    if (thinkingBox) {
+        thinkingBox.innerHTML = `<p>等待${isRed ? '红方' : '黑方'}开始思考...</p>`;
+    }
+}
+
+// 流式输出思考过程（模拟打字机效果）
+function streamThinkingProcess(player, message, speed = 50) {
+    const isRed = player === 'red' || player.includes('红方') || player.includes('OpenAI') || player.includes('GPT');
+    const thinkingBoxId = isRed ? 'red-thinking-process' : 'black-thinking-process';
+    const thinkingBox = document.getElementById(thinkingBoxId);
+    
+    if (thinkingBox) {
+        // 创建思考项
+        const thinkingItem = document.createElement('div');
+        thinkingItem.className = `thinking-item ${isRed ? 'red-thinking' : 'black-thinking'}`;
+        
+        // 添加时间戳
+        const timestamp = document.createElement('div');
+        timestamp.className = 'thinking-timestamp';
+        timestamp.textContent = new Date().toLocaleTimeString();
+        
+        // 添加思考内容容器
+        const thinkingText = document.createElement('div');
+        thinkingText.className = 'thinking-text';
+        
+        thinkingItem.appendChild(timestamp);
+        thinkingItem.appendChild(thinkingText);
+        
+        // 如果是第一条消息，清空默认文本
+        if (thinkingBox.innerHTML.includes('等待') || thinkingBox.innerHTML.includes('开始思考')) {
+            thinkingBox.innerHTML = '';
+        }
+        
+        thinkingBox.appendChild(thinkingItem);
+        
+        // 流式输出文字
+        let index = 0;
+        const typeWriter = () => {
+            if (index < message.length) {
+                thinkingText.textContent += message.charAt(index);
+                index++;
+                thinkingBox.scrollTop = thinkingBox.scrollHeight;
+                setTimeout(typeWriter, speed);
+            }
+        };
+        
+        typeWriter();
+    }
+}
+
 // 中国象棋棋盘渲染器
 class ChessBoardRenderer {
     constructor(canvasId) {
