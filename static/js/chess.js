@@ -13,13 +13,24 @@ class ChessBoardRenderer {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
-        this.boardSize = 480;
-        this.cellSize = this.boardSize / 8;  // 8个间隔，9条线
+        
+        // 标准中国象棋棋盘尺寸比例 (9:10)
+        this.boardWidth = 450;   // 9列
+        this.boardHeight = 500;  // 10行
+        this.margin = 35;
+        
+        this.canvas.width = this.boardWidth + this.margin * 2;
+        this.canvas.height = this.boardHeight + this.margin * 2;
+        
+        this.cellWidth = this.boardWidth / 8;   // 8个间隔，9条线
+        this.cellHeight = this.boardHeight / 9; // 9个间隔，10条线
+        
         this.pieces = {};
         this.lastMove = null;
         
         this.initializePieces();
         this.drawBoard();
+        this.showInitialPosition();
     }
     
     initializePieces() {
@@ -32,29 +43,34 @@ class ChessBoardRenderer {
     
     drawBoard() {
         // 清空画布
-        this.ctx.clearRect(0, 0, this.boardSize, this.boardSize);
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // 绘制棋盘背景
+        // 绘制传统木质背景
         this.ctx.fillStyle = '#F5DEB3';
-        this.ctx.fillRect(0, 0, this.boardSize, this.boardSize);
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // 绘制棋盘线条
+        // 绘制棋盘边框
         this.ctx.strokeStyle = '#8B4513';
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(this.margin - 2, this.margin - 2, this.boardWidth + 4, this.boardHeight + 4);
+        
+        // 设置线条样式
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 1.5;
         
         // 绘制横线（10条）
         for (let i = 0; i <= 9; i++) {
             this.ctx.beginPath();
-            this.ctx.moveTo(0, i * this.cellSize);
-            this.ctx.lineTo(this.boardSize, i * this.cellSize);
+            this.ctx.moveTo(this.margin, this.margin + i * this.cellHeight);
+            this.ctx.lineTo(this.margin + this.boardWidth, this.margin + i * this.cellHeight);
             this.ctx.stroke();
         }
         
         // 绘制竖线（9条）
         for (let i = 0; i <= 8; i++) {
             this.ctx.beginPath();
-            this.ctx.moveTo(i * this.cellSize, 0);
-            this.ctx.lineTo(i * this.cellSize, 9 * this.cellSize);
+            this.ctx.moveTo(this.margin + i * this.cellWidth, this.margin);
+            this.ctx.lineTo(this.margin + i * this.cellWidth, this.margin + this.boardHeight);
             this.ctx.stroke();
         }
         
@@ -64,60 +80,101 @@ class ChessBoardRenderer {
         // 绘制楚河汉界
         this.drawRiverBoundary();
         
-        // 绘制坐标标识
-        this.drawCoordinates();
+        // 绘制兵卒位置标记
+        this.drawPositionMarkers();
     }
     
     drawPalaceDiagonals() {
-        // 红方九宫格斜线
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 1.5;
+        
+        // 黑方九宫格斜线（顶部）
         this.ctx.beginPath();
-        this.ctx.moveTo(3 * this.cellSize, 7 * this.cellSize);
-        this.ctx.lineTo(5 * this.cellSize, 9 * this.cellSize);
+        this.ctx.moveTo(this.margin + 3 * this.cellWidth, this.margin);
+        this.ctx.lineTo(this.margin + 5 * this.cellWidth, this.margin + 2 * this.cellHeight);
         this.ctx.stroke();
         
         this.ctx.beginPath();
-        this.ctx.moveTo(5 * this.cellSize, 7 * this.cellSize);
-        this.ctx.lineTo(3 * this.cellSize, 9 * this.cellSize);
+        this.ctx.moveTo(this.margin + 5 * this.cellWidth, this.margin);
+        this.ctx.lineTo(this.margin + 3 * this.cellWidth, this.margin + 2 * this.cellHeight);
         this.ctx.stroke();
         
-        // 黑方九宫格斜线
+        // 红方九宫格斜线（底部）
         this.ctx.beginPath();
-        this.ctx.moveTo(3 * this.cellSize, 0);
-        this.ctx.lineTo(5 * this.cellSize, 2 * this.cellSize);
+        this.ctx.moveTo(this.margin + 3 * this.cellWidth, this.margin + 7 * this.cellHeight);
+        this.ctx.lineTo(this.margin + 5 * this.cellWidth, this.margin + 9 * this.cellHeight);
         this.ctx.stroke();
         
         this.ctx.beginPath();
-        this.ctx.moveTo(5 * this.cellSize, 0);
-        this.ctx.lineTo(3 * this.cellSize, 2 * this.cellSize);
+        this.ctx.moveTo(this.margin + 5 * this.cellWidth, this.margin + 7 * this.cellHeight);
+        this.ctx.lineTo(this.margin + 3 * this.cellWidth, this.margin + 9 * this.cellHeight);
         this.ctx.stroke();
     }
     
     drawRiverBoundary() {
         // 绘制楚河汉界文字
         this.ctx.fillStyle = '#8B4513';
-        this.ctx.font = 'bold 16px Arial';
+        this.ctx.font = 'bold 18px SimHei, Microsoft YaHei, Arial';
         this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
         
-        this.ctx.fillText('楚河', this.boardSize * 0.25, 4.7 * this.cellSize);
-        this.ctx.fillText('汉界', this.boardSize * 0.75, 4.7 * this.cellSize);
+        const riverY = this.margin + 4.5 * this.cellHeight;
+        
+        this.ctx.fillText('楚河', this.margin + 2 * this.cellWidth, riverY);
+        this.ctx.fillText('汉界', this.margin + 6 * this.cellWidth, riverY);
+    }
+    
+    drawPositionMarkers() {
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 1;
+        
+        // 兵卒位置标记
+        const positions = [
+            // 黑方兵卒位置 (第3行)
+            [0, 3], [2, 3], [4, 3], [6, 3], [8, 3],
+            // 红方兵卒位置 (第6行)
+            [0, 6], [2, 6], [4, 6], [6, 6], [8, 6],
+            // 炮的位置 (第2行和第7行)
+            [1, 2], [7, 2], [1, 7], [7, 7]
+        ];
+        
+        positions.forEach(([col, row]) => {
+            const x = this.margin + col * this.cellWidth;
+            const y = this.margin + row * this.cellHeight;
+            const size = 4;
+            
+            // 绘制十字标记
+            this.ctx.beginPath();
+            this.ctx.moveTo(x - size, y);
+            this.ctx.lineTo(x + size, y);
+            this.ctx.moveTo(x, y - size);
+            this.ctx.lineTo(x, y + size);
+            this.ctx.stroke();
+        });
     }
     
     drawCoordinates() {
-        this.ctx.fillStyle = '#666';
+        this.ctx.fillStyle = '#8B4513';
         this.ctx.font = '12px Arial';
         this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
         
-        // 列标识 (a-i)
+        // 列标识 (a-i) - 底部
         for (let i = 0; i < 9; i++) {
             const letter = String.fromCharCode(97 + i);
-            this.ctx.fillText(letter, i * this.cellSize, this.boardSize + 15);
+            this.ctx.fillText(letter, this.margin + i * this.cellWidth, this.canvas.height - 10);
         }
         
-        // 行标识 (0-9)
-        this.ctx.textAlign = 'left';
+        // 行标识 (0-9) - 左侧
         for (let i = 0; i <= 9; i++) {
-            this.ctx.fillText(i.toString(), -15, i * this.cellSize + 4);
+            this.ctx.fillText(i.toString(), 15, this.margin + i * this.cellHeight);
         }
+    }
+    
+    showInitialPosition() {
+        // 显示初始棋子位置
+        const initialBoard = "rnbakabnr/........./.c.....c./p.p.p.p.p/........./........./P.P.P.P.P/.C.....C./........./RNBAKABNR";
+        this.updateBoard(initialBoard);
     }
     
     updateBoard(boardState) {
@@ -147,40 +204,47 @@ class ChessBoardRenderer {
     }
     
     drawPiece(col, row, piece) {
-        const x = col * this.cellSize;
-        const y = row * this.cellSize;
-        const radius = this.cellSize * 0.35;
+        const x = this.margin + col * this.cellWidth;
+        const y = this.margin + row * this.cellHeight;
+        const radius = Math.min(this.cellWidth, this.cellHeight) * 0.4;
         
-        // 绘制棋子背景圆
+        // 绘制棋子阴影
+        this.ctx.beginPath();
+        this.ctx.arc(x + 2, y + 2, radius, 0, 2 * Math.PI);
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        this.ctx.fill();
+        
+        // 绘制棋子背景
         this.ctx.beginPath();
         this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
         
-        // 红方棋子用红色背景，黑方用黑色背景
         if (piece === piece.toUpperCase()) {
-            this.ctx.fillStyle = '#FFE4E1';  // 红方背景
-            this.ctx.fill();
-            this.ctx.strokeStyle = '#DC143C';
+            // 红方棋子 - 浅色背景
+            this.ctx.fillStyle = '#FFF8DC';
         } else {
-            this.ctx.fillStyle = '#F0F0F0';  // 黑方背景
-            this.ctx.fill();
-            this.ctx.strokeStyle = '#2F4F4F';
+            // 黑方棋子 - 深色背景
+            this.ctx.fillStyle = '#2F2F2F';
         }
+        this.ctx.fill();
         
-        this.ctx.lineWidth = 3;
+        // 绘制棋子边框
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 2;
         this.ctx.stroke();
         
         // 绘制棋子文字
-        if (piece === piece.toUpperCase()) {
-            this.ctx.fillStyle = '#DC143C';  // 红色文字
-        } else {
-            this.ctx.fillStyle = '#2F4F4F';  // 黑色文字
-        }
-        
-        this.ctx.font = `bold ${this.cellSize * 0.5}px SimHei, Arial`;
+        const pieceText = this.pieces[piece] || piece;
+        this.ctx.font = `bold ${Math.min(this.cellWidth, this.cellHeight) * 0.5}px SimHei, Microsoft YaHei, Arial`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         
-        const pieceText = this.pieces[piece] || piece;
+        // 设置文字颜色
+        if (piece === piece.toUpperCase()) {
+            this.ctx.fillStyle = '#DC143C';  // 红方文字
+        } else {
+            this.ctx.fillStyle = '#FFFFFF';  // 黑方文字
+        }
+        
         this.ctx.fillText(pieceText, x, y);
     }
     
@@ -199,9 +263,9 @@ class ChessBoardRenderer {
     }
     
     highlightSquare(col, row, color, alpha) {
-        const x = col * this.cellSize;
-        const y = row * this.cellSize;
-        const size = this.cellSize * 0.8;
+        const x = this.margin + (col + 0.5) * this.cellSize;
+        const y = this.margin + (row + 0.5) * this.cellSize;
+        const size = this.cellSize * 0.7;
         
         this.ctx.fillStyle = color;
         this.ctx.globalAlpha = alpha;
@@ -359,6 +423,7 @@ function resetBattle() {
         updateControlButtons(false);
         clearGameInfo();
         boardRenderer.drawBoard();
+        boardRenderer.showInitialPosition();  // 重新显示初始位置
         
         // 重置统计信息
         document.getElementById('current-round').textContent = '0';

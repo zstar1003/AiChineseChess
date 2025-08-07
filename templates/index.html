@@ -3,59 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大模型象棋对战系统</title>
+    <title>AI象棋对战系统</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- 顶部标题栏 -->
-        <header class="header">
-            <h1>大模型象棋对战系统</h1>
+        <div class="header">
+            <h1>AI象棋对战系统</h1>
             <div class="status-bar">
-                <span id="connection-status">连接状态: 已连接</span>
-                <span id="game-status">游戏状态: 等待开始</span>
+                <div id="connection-status">连接状态: 连接中...</div>
+                <div id="game-status">游戏状态: 等待开始</div>
             </div>
-        </header>
+        </div>
 
-        <!-- 主要内容区域 -->
-        <main class="main-content">
+        <div class="main-content">
             <!-- 左侧控制面板 -->
-            <aside class="control-panel">
+            <div class="control-panel">
                 <div class="panel-section">
-                    <h3>模型设置</h3>
-                    
-                    <!-- 红方设置 -->
+                    <h3>红方配置</h3>
                     <div class="player-config">
-                        <h4>红方（先手）</h4>
+                        <h4>红方 (OpenAI)</h4>
                         <select id="red-model" class="model-select">
                             <option value="gpt-4">GPT-4</option>
                             <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                            <option value="o3-mini">OpenAI o3-mini</option>
-                            <option value="o3">OpenAI o3</option>
+                            <option value="o3-mini">O3 Mini</option>
                         </select>
-                        <input type="text" id="red-api-key" placeholder="API密钥" class="api-input">
-                        <input type="text" id="red-display-name" placeholder="显示名称" class="name-input" value="OpenAI o3">
-                    </div>
-
-                    <!-- 黑方设置 -->
-                    <div class="player-config">
-                        <h4>黑方（后手）</h4>
-                        <select id="black-model" class="model-select">
-                            <option value="deepseek-chat" selected>DeepSeek Chat</option>
-                            <option value="deepseek-coder">DeepSeek Coder</option>
-                            <option value="gpt-4">GPT-4</option>
-                            <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-                        </select>
-                        <input type="text" id="black-api-key" placeholder="API密钥" class="api-input">
-                        <input type="text" id="black-base-url" placeholder="API地址 (可选)" class="url-input" value="https://api.deepseek.com/v1">
-                        <input type="text" id="black-display-name" placeholder="显示名称" class="name-input" value="DeepSeek">
+                        <input type="text" id="red-api-key" class="api-input" placeholder="输入API Key">
+                        <input type="text" id="red-display-name" class="name-input" placeholder="显示名称" value="OpenAI GPT-4">
                     </div>
                 </div>
 
-                <!-- 控制按钮 -->
                 <div class="panel-section">
-                    <h3>对战控制</h3>
+                    <h3>黑方配置</h3>
+                    <div class="player-config">
+                        <h4>黑方 (DeepSeek/Claude)</h4>
+                        <select id="black-model" class="model-select">
+                            <option value="deepseek-chat">DeepSeek Chat</option>
+                            <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                            <option value="gpt-4">GPT-4</option>
+                        </select>
+                        <input type="text" id="black-api-key" class="api-input" placeholder="输入API Key">
+                        <input type="text" id="black-display-name" class="name-input" placeholder="显示名称" value="DeepSeek">
+                        <input type="text" id="black-base-url" class="url-input" placeholder="Base URL (可选)" value="https://api.deepseek.com/v1">
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>控制面板</h3>
                     <div class="control-buttons">
                         <button id="start-battle" class="btn btn-primary">开始对战</button>
                         <button id="stop-battle" class="btn btn-secondary" disabled>停止对战</button>
@@ -63,111 +57,105 @@
                     </div>
                 </div>
 
-                <!-- 对战统计 -->
                 <div class="panel-section">
                     <h3>对战统计</h3>
                     <div class="stats">
                         <div class="stat-item">
                             <span class="stat-label">当前回合:</span>
-                            <span id="current-round" class="stat-value">0</span>
+                            <span class="stat-value" id="current-round">0</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">总步数:</span>
-                            <span id="total-moves" class="stat-value">0</span>
+                            <span class="stat-value" id="total-moves">0</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">对战时长:</span>
-                            <span id="battle-duration" class="stat-value">00:00</span>
+                            <span class="stat-value" id="battle-duration">00:00</span>
                         </div>
                     </div>
                 </div>
-            </aside>
+            </div>
 
             <!-- 中间棋盘区域 -->
-            <section class="chess-board-section">
+            <div class="chess-board-section">
+                <div class="player-info player-black">
+                    <div class="player-name">黑方</div>
+                    <div id="black-thinking" class="thinking-indicator" style="display:none;">思考中...</div>
+                </div>
+
                 <div class="board-container">
-                    <div class="player-info player-black">
-                        <span class="player-name" id="black-player-name">DeepSeek</span>
-                        <span class="player-time" id="black-player-time">00:00</span>
-                        <div class="thinking-indicator" id="black-thinking" style="display: none;">思考中...</div>
-                    </div>
-                    
-                    <canvas id="chess-board" width="480" height="480"></canvas>
-                    
-                    <div class="player-info player-red">
-                        <span class="player-name" id="red-player-name">OpenAI o3</span>
-                        <span class="player-time" id="red-player-time">00:00</span>
-                        <div class="thinking-indicator" id="red-thinking" style="display: none;">思考中...</div>
-                    </div>
+                    <canvas id="chess-board" width="520" height="570"></canvas>
+                </div>
+
+                <div class="player-info player-red">
+                    <div class="player-name">红方</div>
+                    <div id="red-thinking" class="thinking-indicator" style="display:none;">思考中...</div>
                 </div>
 
                 <div class="last-move-info">
-                    <span id="last-move-text">等待开始对战...</span>
+                    <div id="last-move-text">等待开始中国象棋对战...</div>
                 </div>
-            </section>
+            </div>
 
             <!-- 右侧信息面板 -->
-            <aside class="info-panel">
-                <!-- 思考过程 -->
+            <div class="info-panel">
                 <div class="panel-section">
-                    <h3>模型思考过程</h3>
+                    <h3>思考过程</h3>
                     <div id="thinking-process" class="thinking-content">
                         <p>等待模型开始思考...</p>
                     </div>
                 </div>
 
-                <!-- 局面评估 -->
                 <div class="panel-section">
                     <h3>局面评估</h3>
                     <div class="evaluation">
                         <div class="eval-bar">
-                            <div id="eval-indicator" class="eval-fill" style="width: 50%"></div>
+                            <div class="eval-fill" style="width: 50%;"></div>
                         </div>
                         <div class="eval-text">
-                            <span id="eval-value">0.0</span>
-                            <span id="eval-description">均势</span>
+                            <span>红方</span>
+                            <span class="eval-value">均势</span>
+                            <span>黑方</span>
                         </div>
                     </div>
                 </div>
-            </aside>
-        </main>
+            </div>
+        </div>
 
-        <!-- 底部信息区域 -->
-        <footer class="bottom-panel">
-            <!-- 棋谱记录 -->
-            <div class="panel-section">
-                <h3>完整棋谱</h3>
-                <div id="move-history" class="move-history">
+        <!-- 底部面板 -->
+        <div class="bottom-panel">
+            <div class="move-history">
+                <h3>棋谱记录</h3>
+                <div id="move-history">
                     <p>暂无棋谱记录</p>
                 </div>
             </div>
 
-            <!-- 对战日志 -->
-            <div class="panel-section">
+            <div class="battle-log">
                 <h3>对战日志</h3>
-                <div id="battle-log" class="battle-log">
+                <div id="battle-log">
                     <p>等待对战开始...</p>
                 </div>
             </div>
 
-            <!-- 游戏结果 -->
-            <div class="panel-section">
+            <div class="game-result">
                 <h3>对战结果</h3>
-                <div id="game-result" class="game-result">
+                <div id="game-result">
                     <p>对战尚未结束</p>
                 </div>
             </div>
-        </footer>
+        </div>
     </div>
 
     <!-- 加载遮罩 -->
     <div id="loading-overlay" class="loading-overlay" style="display: none;">
         <div class="loading-content">
             <div class="spinner"></div>
-            <p>正在处理中...</p>
+            <p>正在启动AI对战...</p>
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="{{ url_for('static', filename='js/chess.js') }}"></script>
 </body>
 </html>
