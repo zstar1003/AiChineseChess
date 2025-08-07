@@ -29,19 +29,22 @@ def start_battle():
     black_config = data.get('black_player')
     
     try:
-        # 创建玩家实例
+        # 创建玩家实例（传入socketio实例以支持流式输出）
+        # 红方固定使用DeepSeek-R1模型
         red_player = LLMPlayer(
-            model_name=red_config['model_name'],
+            model_name="deepseek-ai/DeepSeek-R1",  # 严格按照test_deepseek.py的模型名称
             api_key=red_config['api_key'],
-            base_url=red_config.get('base_url'),
-            display_name=red_config['display_name']
+            base_url="https://api.siliconflow.cn/v1",  # 固定使用SiliconFlow API
+            display_name="DeepSeek-R1",
+            socketio=socketio
         )
         
         black_player = LLMPlayer(
             model_name=black_config['model_name'],
             api_key=black_config['api_key'],
             base_url=black_config.get('base_url'),
-            display_name=black_config['display_name']
+            display_name=black_config['display_name'],
+            socketio=socketio
         )
         
         # 创建对战实例
@@ -60,7 +63,10 @@ def run_battle():
     global current_battle
     
     if not current_battle:
+        print("错误: 没有当前对战实例")
         return
+    
+    print("开始运行对战...")
     
     while not current_battle.game.is_game_over():
         try:
@@ -69,6 +75,8 @@ def run_battle():
                             if current_battle.game.current_player == "red" 
                             else current_battle.black_player)
             
+            print(f"当前轮到: {current_player.display_name}")
+            
             # 发送思考状态
             socketio.emit('thinking', {
                 'player': current_player.display_name,
@@ -76,10 +84,13 @@ def run_battle():
             })
             
             # 获取模型的下一步棋
+            print(f"正在获取 {current_player.display_name} 的棋步...")
             move_result = current_player.get_move(
                 current_battle.game.get_board_state(),
                 current_battle.game.move_history
             )
+            
+            print(f"获得棋步结果: {move_result}")
             
             if move_result and current_battle.game.make_move(move_result['move']):
                 # 记录棋步
@@ -95,27 +106,37 @@ def run_battle():
                     'history': current_battle.battle_log[-10:]  # 最近10步
                 })
                 
+                print(f"{current_player.display_name} 走了: {move_result['move']}")
+                
                 # 短暂延迟，便于观察
                 time.sleep(2)
                 
             else:
                 # 无效棋步，结束游戏
+                print(f"无效棋步: {move_result}")
                 socketio.emit('game_error', {
                     'message': f'{current_player.display_name} 产生了无效棋步'
                 })
                 break
                 
         except Exception as e:
+            print(f"对战过程中出现异常: {e}")
+            import traceback
+            traceback.print_exc()
             socketio.emit('game_error', {'message': f'对战出错: {str(e)}'})
             break
     
     # 游戏结束，发送结果
-    result = current_battle.get_battle_result()
-    socketio.emit('game_over', {
-        'result': result,
-        'total_moves': len(current_battle.game.move_history),
-        'battle_log': current_battle.battle_log
-    })
+    try:
+        result = current_battle.get_battle_result()
+        socketio.emit('game_over', {
+            'result': result,
+            'total_moves': len(current_battle.game.move_history),
+            'battle_log': current_battle.battle_log
+        })
+        print(f"游戏结束: {result}")
+    except Exception as e:
+        print(f"发送游戏结束信息时出错: {e}")
 
 @app.route('/api/stop_battle', methods=['POST'])
 def stop_battle():
@@ -141,4 +162,11 @@ def get_battle_status():
     })
 
 if __name__ == '__main__':
-    socketio.run(app, debug=False, host='0.0.0.0', port=5002)
+    try:
+        print("正在启动AI象棋对战系统...")
+        print("访问地址: http://localhost:5003")
+        socketio.run(app, debug=True, host='0.0.0.0', port=5003)
+    except Exception as e:
+        print(f"启动应用时发生错误: {e}")
+        import traceback
+        traceback.print_exc()

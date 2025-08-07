@@ -114,6 +114,59 @@ function streamThinkingProcess(player, message, speed = 50) {
     }
 }
 
+// 实时流式输出思考过程（用于Socket.IO流式数据）
+let currentStreamingElements = {};
+
+function streamThinkingProcessRealtime(player, content) {
+    const thinkingBoxId = `${player}-thinking-process`;
+    const thinkingBox = document.getElementById(thinkingBoxId);
+    
+    if (!thinkingBox) return;
+    
+    // 如果是第一次为该玩家创建流式元素
+    if (!currentStreamingElements[player]) {
+        // 如果是第一条消息，清空默认文本
+        if (thinkingBox.innerHTML.includes('等待') || thinkingBox.innerHTML.includes('开始思考')) {
+            thinkingBox.innerHTML = '';
+        }
+        
+        // 创建思考项
+        const thinkingItem = document.createElement('div');
+        thinkingItem.className = `thinking-item ${player === 'red' ? 'red-thinking' : 'black-thinking'}`;
+        
+        // 添加时间戳
+        const timestamp = document.createElement('div');
+        timestamp.className = 'thinking-timestamp';
+        timestamp.textContent = new Date().toLocaleTimeString();
+        
+        // 添加思考内容容器
+        const thinkingText = document.createElement('div');
+        thinkingText.className = 'thinking-text';
+        thinkingText.id = `${player}-current-stream`;
+        
+        thinkingItem.appendChild(timestamp);
+        thinkingItem.appendChild(thinkingText);
+        thinkingBox.appendChild(thinkingItem);
+        
+        // 保存当前流式元素的引用
+        currentStreamingElements[player] = thinkingText;
+    }
+    
+    // 追加内容到当前流式元素
+    const streamElement = currentStreamingElements[player];
+    if (streamElement) {
+        streamElement.textContent += content;
+        thinkingBox.scrollTop = thinkingBox.scrollHeight;
+    }
+}
+
+// 清理流式输出状态
+function clearStreamingState(player) {
+    if (currentStreamingElements[player]) {
+        delete currentStreamingElements[player];
+    }
+}
+
 // 中国象棋棋盘渲染器
 class ChessBoardRenderer {
     constructor(canvasId) {
@@ -449,6 +502,22 @@ function initializeSocketEvents() {
         showThinkingStatus(data.player, data.message);
     });
     
+    // 新增：处理流式思考过程
+    socket.on('thinking_stream', function(data) {
+        if (data.is_complete) {
+            // 思考完成，添加分隔线
+            const playerBox = document.getElementById(`${data.player}-thinking-process`);
+            if (playerBox) {
+                playerBox.innerHTML += '<hr style="margin: 10px 0; border: 1px solid rgba(255,255,255,0.2);">';
+                playerBox.scrollTop = playerBox.scrollHeight;
+            }
+            return;
+        }
+        
+        // 流式添加思考内容
+        streamThinkingProcessRealtime(data.player, data.content);
+    });
+    
     socket.on('move_made', function(data) {
         handleMoveMade(data);
     });
@@ -489,7 +558,7 @@ function startBattle() {
         if (data.status === 'success') {
             gameState.isPlaying = true;
             gameState.startTime = new Date();
-            updateGameStatus('中国象棋对战进行中');
+            console.log('中国象棋对战已开始');
             updateControlButtons(true);
             clearGameInfo();
         } else {
@@ -556,12 +625,10 @@ function getPlayerConfig(player) {
         display_name: document.getElementById(`${prefix}-display-name`).value
     };
     
-    // 如果是黑方且有base_url输入框，添加base_url
-    if (player === 'black') {
-        const baseUrlInput = document.getElementById(`${prefix}-base-url`);
-        if (baseUrlInput && baseUrlInput.value.trim()) {
-            config.base_url = baseUrlInput.value.trim();
-        }
+    // 添加base_url（红方和黑方都需要）
+    const baseUrlInput = document.getElementById(`${prefix}-base-url`);
+    if (baseUrlInput && baseUrlInput.value.trim()) {
+        config.base_url = baseUrlInput.value.trim();
     }
     
     return config;
@@ -576,17 +643,22 @@ function updateModelSettings() {
     const redModel = document.getElementById('red-model').value;
     const blackModel = document.getElementById('black-model').value;
     
-    // 更新显示名称
-    if (redModel.includes('gpt') || redModel.includes('o3')) {
-        document.getElementById('red-display-name').value = `OpenAI ${redModel.toUpperCase()}`;
+    // 更新红方显示名称（使用硅基流动API）
+    if (redModel.includes('deepseek-r1')) {
+        if (redModel.includes('distill-llama')) {
+            document.getElementById('red-display-name').value = 'DeepSeek-R1-Distill-Llama-70B';
+        } else if (redModel.includes('distill-qwen')) {
+            document.getElementById('red-display-name').value = 'DeepSeek-R1-Distill-Qwen-32B';
+        } else {
+            document.getElementById('red-display-name').value = 'DeepSeek-R1';
+        }
+        document.getElementById('red-base-url').value = 'https://api.siliconflow.cn/v1';
     }
     
-    if (blackModel.includes('deepseek')) {
-        document.getElementById('black-display-name').value = 'DeepSeek';
-        document.getElementById('black-base-url').value = 'https://api.deepseek.com/v1';
-    } else if (blackModel.includes('claude')) {
-        document.getElementById('black-display-name').value = 'Claude';
-        document.getElementById('black-base-url').value = 'https://api.anthropic.com';
+    // 更新黑方显示名称（只有Gemini-2.5-Flash）
+    if (blackModel.includes('gemini')) {
+        document.getElementById('black-display-name').value = 'Gemini-2.5-Flash';
+        document.getElementById('black-base-url').value = 'https://generativelanguage.googleapis.com/v1beta';
     }
 }
 
@@ -661,7 +733,7 @@ function handleGameOver(data) {
     
     gameState.isPlaying = false;
     hideThinkingStatus();
-    updateGameStatus('对战结束');
+    console.log('对战结束');
     updateControlButtons(false);
     
     // 显示游戏结果
@@ -696,11 +768,17 @@ function handleGameError(data) {
 }
 
 function updateConnectionStatus(status) {
-    document.getElementById('connection-status').textContent = `连接状态: ${status}`;
+    const element = document.getElementById('connection-status');
+    if (element) {
+        element.textContent = `连接状态: ${status}`;
+    }
 }
 
 function updateGameStatus(status) {
-    document.getElementById('game-status').textContent = `游戏状态: ${status}`;
+    const element = document.getElementById('game-status');
+    if (element) {
+        element.textContent = `游戏状态: ${status}`;
+    }
 }
 
 function updateControlButtons(isPlaying) {
@@ -710,19 +788,34 @@ function updateControlButtons(isPlaying) {
 
 function clearGameInfo() {
     // 清空思考过程
-    document.getElementById('thinking-process').innerHTML = '<p>等待模型开始思考...</p>';
+    const thinkingProcess = document.getElementById('thinking-process');
+    if (thinkingProcess) {
+        thinkingProcess.innerHTML = '<p>等待模型开始思考...</p>';
+    }
     
     // 清空棋谱历史
-    document.getElementById('move-history').innerHTML = '<p>暂无棋谱记录</p>';
+    const moveHistory = document.getElementById('move-history');
+    if (moveHistory) {
+        moveHistory.innerHTML = '<p>暂无棋谱记录</p>';
+    }
     
     // 清空对战日志
-    document.getElementById('battle-log').innerHTML = '<p>等待对战开始...</p>';
+    const battleLog = document.getElementById('battle-log');
+    if (battleLog) {
+        battleLog.innerHTML = '<p>等待对战开始...</p>';
+    }
     
     // 清空游戏结果
-    document.getElementById('game-result').innerHTML = '<p>对战尚未结束</p>';
+    const gameResult = document.getElementById('game-result');
+    if (gameResult) {
+        gameResult.innerHTML = '<p>对战尚未结束</p>';
+    }
     
     // 重置最后一步信息
-    document.getElementById('last-move-text').textContent = '等待开始中国象棋对战...';
+    const lastMoveText = document.getElementById('last-move-text');
+    if (lastMoveText) {
+        lastMoveText.textContent = '等待开始中国象棋对战...';
+    }
 }
 
 function updateMoveHistory(history) {

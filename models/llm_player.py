@@ -3,21 +3,23 @@ import requests
 import json
 import time
 import re
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Generator
+from google import genai
 
 class LLMPlayer:
     """大语言模型中国象棋玩家类"""
     
-    def __init__(self, model_name: str, api_key: str, base_url: Optional[str] = None, display_name: str = ""):
+    def __init__(self, model_name: str, api_key: str, base_url: Optional[str] = None, display_name: str = "", socketio=None):
         self.model_name = model_name
         self.api_key = api_key
         self.base_url = base_url
         self.display_name = display_name or model_name
         self.move_count = 0
         self.total_thinking_time = 0
+        self.socketio = socketio
     
     def get_move(self, board_state: str, move_history: List[dict]) -> Optional[Dict]:
-        """获取模型的下一步棋
+        """获取模型的下一步棋（支持流式输出）
         
         Args:
             board_state: 当前棋盘状态
@@ -32,15 +34,22 @@ class LLMPlayer:
             # 构建提示词
             prompt = self.build_chess_prompt(board_state, move_history)
             
-            # 调用相应的API
-            if "openai" in self.model_name.lower() or "gpt" in self.model_name.lower() or "o3" in self.model_name.lower():
-                response = self.call_openai_api(prompt)
-            elif "deepseek" in self.model_name.lower():
-                response = self.call_deepseek_api(prompt)
-            elif "claude" in self.model_name.lower():
-                response = self.call_claude_api(prompt)
+            # 确定玩家颜色
+            player_color = "red" if len(move_history) % 2 == 0 else "black"
+            
+            # 调用相应的流式API
+            if "deepseek" in self.model_name.lower():
+                response = self.call_deepseek_stream(prompt, player_color)
+            elif "gemini" in self.model_name.lower():
+                response = self.call_gemini_stream(prompt, player_color)
             else:
-                response = self.call_generic_api(prompt)
+                # 回退到非流式API
+                if "openai" in self.model_name.lower() or "gpt" in self.model_name.lower():
+                    response = self.call_openai_api(prompt)
+                elif "claude" in self.model_name.lower():
+                    response = self.call_claude_api(prompt)
+                else:
+                    response = self.call_generic_api(prompt)
             
             # 解析响应
             move_info = self.parse_response(response)
@@ -59,6 +68,126 @@ class LLMPlayer:
             print(f"获取{self.display_name}棋步时出错: {e}")
         
         return None
+    
+    def call_deepseek_stream(self, prompt: str, player_color: str) -> str:
+        """调用DeepSeek流式API - 严格按照test_deepseek.py的逻辑"""
+        try:
+            # 严格按照test_deepseek.py的格式
+            url = "https://api.siliconflow.cn/v1/chat/completions"
+            
+            payload = {
+                "model": "deepseek-ai/DeepSeek-R1",
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ],
+                "stream": True
+            }
+            
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.post(url, json=payload, headers=headers, stream=True, timeout=30)
+            
+            if response.status_code == 200:
+                full_response = ""
+                for line in response.iter_lines():
+                    if line:
+                        line = line.decode('utf-8')
+                        if line.startswith('data: '):
+                            line = line[6:]
+                            if line.strip() == '[DONE]':
+                                break
+                            try:
+                                chunk = json.loads(line)
+                                if 'choices' in chunk and len(chunk['choices']) > 0:
+                                    delta = chunk['choices'][0].get('delta', {})
+                                    if 'content' in delta and delta['content'] is not None:
+                                        content = delta['content']
+                                        full_response += content
+                                        # 发送流式思考过程
+                                        if self.socketio:
+                                            self.socketio.emit('thinking_stream', {
+                                                'player': player_color,
+                                                'content': content,
+                                                'is_complete': False
+                                            })
+                            except json.JSONDecodeError:
+                                continue
+                
+                # 发送完成信号
+                if self.socketio:
+                    self.socketio.emit('thinking_stream', {
+                        'player': player_color,
+                        'content': '',
+                        'is_complete': True
+                    })
+                
+                return full_response
+            else:
+                print(f"DeepSeek流式API错误: {response.status_code} - {response.text}")
+                return ""
+                
+        except Exception as e:
+            print(f"DeepSeek流式API调用失败: {e}")
+            return ""
+    
+    def call_gemini_stream(self, prompt: str, player_color: str) -> str:
+        """调用Gemini流式API"""
+        try:
+            client = genai.Client(api_key=self.api_key)
+            
+            # 构建完整的提示
+            full_prompt = f"你是一位专业的中国象棋大师，擅长分析局面和制定策略。\n\n{prompt}"
+            
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=full_prompt,
+                config=genai.GenerateContentConfig(
+                    temperature=0.7,
+                    max_output_tokens=500
+                )
+            )
+            
+            # Gemini API目前不支持真正的流式输出，我们模拟流式效果
+            full_text = response.text
+            
+            # 按句子分割并逐步发送
+            sentences = re.split(r'([。！？\n])', full_text)
+            current_text = ""
+            
+            for i in range(0, len(sentences), 2):
+                if i < len(sentences):
+                    sentence = sentences[i]
+                    if i + 1 < len(sentences):
+                        sentence += sentences[i + 1]
+                    
+                    current_text += sentence
+                    
+                    if self.socketio:
+                        self.socketio.emit('thinking_stream', {
+                            'player': player_color,
+                            'content': sentence,
+                            'is_complete': False
+                        })
+                    
+                    # 短暂延迟模拟流式效果
+                    time.sleep(0.1)
+            
+            # 发送完成信号
+            if self.socketio:
+                self.socketio.emit('thinking_stream', {
+                    'player': player_color,
+                    'content': '',
+                    'is_complete': True
+                })
+            
+            return full_text
+            
+        except Exception as e:
+            print(f"Gemini流式API调用失败: {e}")
+            return ""
     
     def build_chess_prompt(self, board_state: str, move_history: List[dict]) -> str:
         """构建中国象棋提示词"""

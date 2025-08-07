@@ -15,29 +15,26 @@
                 <div class="panel-section">
                     <h3>红方配置</h3>
                     <div class="player-config">
-                        <h4>红方 (OpenAI)</h4>
                         <select id="red-model" class="model-select">
-                            <option value="gpt-4">GPT-4</option>
-                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                            <option value="o3-mini">O3 Mini</option>
+                            <option value="deepseek-r1">DeepSeek-R1</option>
+                            <option value="deepseek-r1-distill-llama-70b">DeepSeek-R1-Distill-Llama-70B</option>
+                            <option value="deepseek-r1-distill-qwen-32b">DeepSeek-R1-Distill-Qwen-32B</option>
                         </select>
-                        <input type="text" id="red-api-key" class="api-input" placeholder="输入API Key">
-                        <input type="text" id="red-display-name" class="name-input" placeholder="显示名称" value="OpenAI GPT-4">
+                        <input type="text" id="red-api-key" class="api-input" placeholder="输入硅基流动 API Key" value="sk-lsppjamzxrcfktjogxxakhpvebzdpcusuvystaziktgfsmfy">
+                        <input type="text" id="red-display-name" class="name-input" placeholder="显示名称" value="DeepSeek-R1" readonly>
+                        <input type="text" id="red-base-url" class="url-input" placeholder="Base URL (可选)" value="https://api.siliconflow.cn/v1" readonly>
                     </div>
                 </div>
 
                 <div class="panel-section">
                     <h3>黑方配置</h3>
                     <div class="player-config">
-                        <h4>黑方 (DeepSeek/Claude)</h4>
                         <select id="black-model" class="model-select">
-                            <option value="deepseek-chat">DeepSeek Chat</option>
-                            <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-                            <option value="gpt-4">GPT-4</option>
+                            <option value="gemini-2.5-flash">Gemini-2.5-Flash</option>
                         </select>
-                        <input type="text" id="black-api-key" class="api-input" placeholder="输入API Key">
-                        <input type="text" id="black-display-name" class="name-input" placeholder="显示名称" value="DeepSeek">
-                        <input type="text" id="black-base-url" class="url-input" placeholder="Base URL (可选)" value="https://api.deepseek.com/v1">
+                        <input type="text" id="black-api-key" class="api-input" placeholder="输入Google API Key">
+                        <input type="text" id="black-display-name" class="name-input" placeholder="显示名称" value="Gemini-2.5-Flash">
+                        <input type="text" id="black-base-url" class="url-input" placeholder="Base URL (可选)" value="https://generativelanguage.googleapis.com/v1beta">
                     </div>
                 </div>
 
@@ -47,6 +44,10 @@
                         <button id="start-battle" class="btn btn-primary">开始对战</button>
                         <button id="stop-battle" class="btn btn-secondary" disabled>停止对战</button>
                         <button id="reset-battle" class="btn btn-warning">重置游戏</button>
+                    </div>
+                    <div class="status-info">
+                        <div id="connection-status">连接状态: 未连接</div>
+                        <div id="game-status">游戏状态: 等待开始</div>
                     </div>
                 </div>
 
@@ -93,6 +94,17 @@
                     <h3>红方思考</h3>
                     <div id="red-thinking-process" class="thinking-content">
                         <p>等待红方开始思考...</p>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>游戏信息</h3>
+                    <div class="game-info">
+                        <div id="last-move-text">等待开始中国象棋对战...</div>
+                        <div id="thinking-process"><p>等待模型开始思考...</p></div>
+                        <div id="move-history"><p>暂无棋谱记录</p></div>
+                        <div id="battle-log"><p>等待对战开始...</p></div>
+                        <div id="game-result"><p>对战尚未结束</p></div>
                     </div>
                 </div>
             </div>
