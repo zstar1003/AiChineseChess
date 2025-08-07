@@ -66,10 +66,17 @@ class ChessBoardRenderer {
             this.ctx.stroke();
         }
         
-        // 绘制竖线（9条）
+        // 绘制竖线（9条）- 楚河汉界中间不连接
         for (let i = 0; i <= 8; i++) {
+            // 上半部分竖线（黑方区域）
             this.ctx.beginPath();
             this.ctx.moveTo(this.margin + i * this.cellWidth, this.margin);
+            this.ctx.lineTo(this.margin + i * this.cellWidth, this.margin + 4 * this.cellHeight);
+            this.ctx.stroke();
+            
+            // 下半部分竖线（红方区域）
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.margin + i * this.cellWidth, this.margin + 5 * this.cellHeight);
             this.ctx.lineTo(this.margin + i * this.cellWidth, this.margin + this.boardHeight);
             this.ctx.stroke();
         }
