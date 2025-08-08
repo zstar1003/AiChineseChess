@@ -431,6 +431,9 @@ class LLMPlayer:
             return None
         
         try:
+            print(f"开始解析响应，响应长度: {len(response)}")
+            print(f"响应内容预览: {response[-500:]}")  # 显示最后500个字符
+            
             # 提取分析内容
             analysis_match = re.search(r'分析[：:]\s*(.+?)(?=策略|棋步|$)', response, re.DOTALL)
             analysis = analysis_match.group(1).strip() if analysis_match else ""
@@ -439,27 +442,40 @@ class LLMPlayer:
             strategy_match = re.search(r'策略[：:]\s*(.+?)(?=棋步|$)', response, re.DOTALL)
             strategy = strategy_match.group(1).strip() if strategy_match else ""
             
-            # 提取棋步（中国象棋坐标格式）
-            move_match = re.search(r'棋步[：:]\s*([a-i][0-9][a-i][0-9])', response)
-            if not move_match:
-                # 尝试其他格式
-                move_match = re.search(r'([a-i][0-9][a-i][0-9])', response)
+            # 提取棋步（中国象棋坐标格式）- 更宽松的匹配
+            move_patterns = [
+                r'棋步[：:]\s*([a-i][0-9][a-i][0-9])',  # 标准格式：棋步：e6e7
+                r'([a-i][0-9][a-i][0-9])\s*$',          # 行末的坐标格式
+                r'([a-i][0-9][a-i][0-9])',              # 任何位置的坐标格式
+            ]
             
-            if move_match:
-                move = move_match.group(1).lower()
-                return {
+            move = None
+            for pattern in move_patterns:
+                move_match = re.search(pattern, response)
+                if move_match:
+                    move = move_match.group(1).lower()
+                    print(f"使用模式 '{pattern}' 找到棋步: {move}")
+                    break
+            
+            if move:
+                result = {
                     'move': move,
                     'analysis': analysis,
                     'strategy': strategy,
                     'thinking': f"分析: {analysis}\n策略: {strategy}",
                     'raw_response': response
                 }
+                print(f"成功解析棋步: {result}")
+                return result
             else:
-                print(f"无法从响应中提取有效棋步: {response}")
+                print(f"无法从响应中提取有效棋步")
+                print(f"完整响应内容: {response}")
                 return None
                 
         except Exception as e:
             print(f"解析响应时出错: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def get_stats(self) -> Dict:
