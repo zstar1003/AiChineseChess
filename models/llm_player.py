@@ -72,65 +72,119 @@ class LLMPlayer:
     def call_deepseek_stream(self, prompt: str, player_color: str) -> str:
         """调用DeepSeek流式API - 严格按照test_deepseek.py的逻辑"""
         try:
-            # 严格按照test_deepseek.py的格式
-            url = "https://api.siliconflow.cn/v1/chat/completions"
+            print(f"开始调用DeepSeek流式API，玩家颜色: {player_color}")
             
-            payload = {
-                "model": "deepseek-ai/DeepSeek-R1",
-                "messages": [
+            # 严格按照test_deepseek.py的逻辑：使用OpenAI客户端
+            from openai import OpenAI
+            
+            client = OpenAI(
+                api_key=self.api_key,
+                base_url="https://api.siliconflow.cn/v1"
+            )
+            
+            print(f"创建OpenAI客户端，base_url: https://api.siliconflow.cn/v1")
+            
+            response = client.chat.completions.create(
+                model="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+                messages=[
                     {"role": "user", "content": prompt}
                 ],
-                "stream": True
-            }
+                stream=True  # 启用流式输出
+            )
             
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
+            print("开始接收流式响应...")
             
-            response = requests.post(url, json=payload, headers=headers, stream=True, timeout=30)
+            full_content = ""
+            chunk_count = 0
+            buffer = ""  # 缓冲区，用于积累内容
+            buffer_size = 20  # 每20个字符发送一次，减少零碎输出
             
-            if response.status_code == 200:
-                full_response = ""
-                for line in response.iter_lines():
-                    if line:
-                        line = line.decode('utf-8')
-                        if line.startswith('data: '):
-                            line = line[6:]
-                            if line.strip() == '[DONE]':
-                                break
-                            try:
-                                chunk = json.loads(line)
-                                if 'choices' in chunk and len(chunk['choices']) > 0:
-                                    delta = chunk['choices'][0].get('delta', {})
-                                    if 'content' in delta and delta['content'] is not None:
-                                        content = delta['content']
-                                        full_response += content
-                                        # 发送流式思考过程
-                                        if self.socketio:
-                                            self.socketio.emit('thinking_stream', {
-                                                'player': player_color,
-                                                'content': content,
-                                                'is_complete': False
-                                            })
-                            except json.JSONDecodeError:
-                                continue
+            for chunk in response:
+                chunk_count += 1
+                if not chunk.choices:
+                    continue
+                    
+                delta = chunk.choices[0].delta
                 
-                # 发送完成信号
+                # 处理普通内容
+                if delta.content:
+                    content = delta.content
+                    full_content += content
+                    buffer += content
+                
+                # 处理推理内容（DeepSeek-R1特有）
+                if hasattr(delta, "reasoning_content") and delta.reasoning_content:
+                    reasoning_content = delta.reasoning_content
+                    full_content += reasoning_content
+                    buffer += reasoning_content
+                
+                # 当缓冲区达到一定大小时发送
+                if len(buffer) >= buffer_size:
+                    print(f"发送缓冲内容 (长度{len(buffer)}): {repr(buffer[:50])}...")
+                    if self.socketio:
+                        try:
+                            # 使用Flask-SocketIO的正确方式发送事件
+                            event_data = {
+                                'player': player_color,
+                                'content': buffer,
+                                'is_complete': False
+                            }
+                            print(f"准备发送事件数据: {event_data}")
+                            
+                            # 发送事件
+                            self.socketio.emit('thinking_stream', event_data)
+                            print(f"成功发送thinking_stream事件到{player_color}")
+                            
+                            # 强制刷新Socket.IO
+                            self.socketio.sleep(0.01)
+                            
+                        except Exception as e:
+                            print(f"发送thinking_stream事件失败: {e}")
+                            import traceback
+                            traceback.print_exc()
+                    else:
+                        print("警告: socketio实例为None")
+                    buffer = ""  # 清空缓冲区
+            
+            # 发送剩余的缓冲内容
+            if buffer:
+                print(f"发送最后的缓冲内容 (长度{len(buffer)}): {repr(buffer[:50])}...")
                 if self.socketio:
+                    try:
+                        self.socketio.emit('thinking_stream', {
+                            'player': player_color,
+                            'content': buffer,
+                            'is_complete': False
+                        })
+                        print(f"成功发送最后的thinking_stream事件到{player_color}")
+                    except Exception as e:
+                        print(f"发送最后的thinking_stream事件失败: {e}")
+                else:
+                    print("警告: socketio实例为None")
+            
+            print(f"流式响应完成，总块数: {chunk_count}, 总内容长度: {len(full_content)}")
+            
+            # 发送完成信号
+            if self.socketio:
+                try:
+                    print("发送流式完成信号")
                     self.socketio.emit('thinking_stream', {
                         'player': player_color,
                         'content': '',
                         'is_complete': True
                     })
-                
-                return full_response
+                    print(f"成功发送完成信号到{player_color}")
+                except Exception as e:
+                    print(f"发送完成信号失败: {e}")
             else:
-                print(f"DeepSeek流式API错误: {response.status_code} - {response.text}")
-                return ""
+                print("警告: socketio实例为None，无法发送完成信号")
+            
+            return full_content
                 
         except Exception as e:
             print(f"DeepSeek流式API调用失败: {e}")
+            import traceback
+            traceback.print_exc()
             return ""
     
     def call_gemini_stream(self, prompt: str, player_color: str) -> str:

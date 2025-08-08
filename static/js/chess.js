@@ -121,13 +121,22 @@ function streamThinkingProcessRealtime(player, content) {
     const thinkingBoxId = `${player}-thinking-process`;
     const thinkingBox = document.getElementById(thinkingBoxId);
     
-    if (!thinkingBox) return;
+    console.log(`streamThinkingProcessRealtime调用: player=${player}, thinkingBoxId=${thinkingBoxId}`);
+    console.log('thinkingBox元素:', thinkingBox);
+    
+    if (!thinkingBox) {
+        console.error(`找不到思考区元素: ${thinkingBoxId}`);
+        return;
+    }
     
     // 如果是第一次为该玩家创建流式元素
     if (!currentStreamingElements[player]) {
+        console.log(`为${player}创建新的流式元素`);
+        
         // 如果是第一条消息，清空默认文本
         if (thinkingBox.innerHTML.includes('等待') || thinkingBox.innerHTML.includes('开始思考')) {
             thinkingBox.innerHTML = '';
+            console.log(`清空${player}的默认文本`);
         }
         
         // 创建思考项
@@ -150,6 +159,7 @@ function streamThinkingProcessRealtime(player, content) {
         
         // 保存当前流式元素的引用
         currentStreamingElements[player] = thinkingText;
+        console.log(`${player}的流式元素已创建并保存`);
     }
     
     // 追加内容到当前流式元素
@@ -157,6 +167,9 @@ function streamThinkingProcessRealtime(player, content) {
     if (streamElement) {
         streamElement.textContent += content;
         thinkingBox.scrollTop = thinkingBox.scrollHeight;
+        console.log(`成功向${player}的思考区添加内容: "${content.substring(0, 20)}..."`);
+    } else {
+        console.error(`${player}的流式元素不存在`);
     }
 }
 
@@ -486,10 +499,19 @@ function bindEventListeners() {
 }
 
 function initializeSocketEvents() {
+    console.log('开始初始化Socket事件监听器...');
+    
     // 连接状态
     socket.on('connect', function() {
         updateConnectionStatus('已连接');
         console.log('Socket连接成功');
+        console.log('Socket ID:', socket.id);
+        
+        // 连接成功后立即测试事件接收
+        console.log('测试Socket.IO事件接收...');
+        
+        // 连接成功后重新绑定事件监听器
+        bindThinkingStreamEvent();
     });
     
     socket.on('disconnect', function() {
@@ -499,36 +521,101 @@ function initializeSocketEvents() {
     
     // 游戏事件
     socket.on('thinking', function(data) {
+        console.log('收到thinking事件:', data);
         showThinkingStatus(data.player, data.message);
     });
     
+    // 初始绑定thinking_stream事件
+    bindThinkingStreamEvent();
+    
+    socket.on('move_made', function(data) {
+        console.log('收到move_made事件:', data);
+        handleMoveMade(data);
+    });
+    
+    socket.on('game_over', function(data) {
+        console.log('收到game_over事件:', data);
+        handleGameOver(data);
+    });
+    
+    socket.on('game_error', function(data) {
+        console.log('收到game_error事件:', data);
+        handleGameError(data);
+    });
+    
+    // 添加通用事件监听器来捕获所有事件
+    socket.onAny(function(eventName, ...args) {
+        console.log(`收到Socket.IO事件: ${eventName}`, args);
+    });
+    
+    console.log('Socket事件监听器初始化完成');
+}
+
+// 单独的函数来绑定thinking_stream事件
+function bindThinkingStreamEvent() {
+    console.log('绑定thinking_stream事件监听器...');
+    
+    // 移除之前的监听器（如果存在）
+    socket.off('thinking_stream');
+    
     // 新增：处理流式思考过程
     socket.on('thinking_stream', function(data) {
+        console.log('=== 收到thinking_stream事件 ===');
+        console.log('原始数据:', data);
+        console.log('数据类型:', typeof data);
+        console.log('JSON字符串:', JSON.stringify(data));
+        
+        // 确保数据格式正确
+        if (!data || typeof data !== 'object') {
+            console.error('thinking_stream数据格式错误:', data);
+            return;
+        }
+        
         if (data.is_complete) {
-            // 思考完成，添加分隔线
+            // 思考完成，添加分隔线和清理状态
+            console.log(`${data.player}思考完成`);
             const playerBox = document.getElementById(`${data.player}-thinking-process`);
             if (playerBox) {
                 playerBox.innerHTML += '<hr style="margin: 10px 0; border: 1px solid rgba(255,255,255,0.2);">';
                 playerBox.scrollTop = playerBox.scrollHeight;
             }
+            // 清理流式状态
+            clearStreamingState(data.player);
             return;
         }
         
         // 流式添加思考内容
-        streamThinkingProcessRealtime(data.player, data.content);
+        if (data.content && data.content.length > 0) {
+            console.log(`=== 开始处理思考内容 ===`);
+            console.log(`玩家: ${data.player}`);
+            console.log(`内容长度: ${data.content.length}`);
+            console.log(`内容预览: "${data.content.substring(0, 50)}..."`);
+            console.log(`目标思考区ID: ${data.player}-thinking-process`);
+            
+            // 检查思考区是否存在
+            const thinkingBox = document.getElementById(`${data.player}-thinking-process`);
+            console.log('思考区元素查找结果:', thinkingBox);
+            
+            if (!thinkingBox) {
+                console.error(`找不到思考区元素: ${data.player}-thinking-process`);
+                // 列出所有可能的思考区元素
+                const allThinkingElements = document.querySelectorAll('[id*="thinking"]');
+                console.log('页面中所有包含thinking的元素:', allThinkingElements);
+                for (let i = 0; i < allThinkingElements.length; i++) {
+                    console.log(`  - ${allThinkingElements[i].id}: ${allThinkingElements[i].tagName}`);
+                }
+                return;
+            }
+            
+            console.log('找到思考区元素，调用streamThinkingProcessRealtime');
+            streamThinkingProcessRealtime(data.player, data.content);
+            console.log('=== 思考内容处理完成 ===');
+        } else {
+            console.warn('收到空内容的thinking_stream事件，内容:', data.content);
+        }
     });
     
-    socket.on('move_made', function(data) {
-        handleMoveMade(data);
-    });
-    
-    socket.on('game_over', function(data) {
-        handleGameOver(data);
-    });
-    
-    socket.on('game_error', function(data) {
-        handleGameError(data);
-    });
+    console.log('thinking_stream事件监听器绑定完成');
 }
 
 function startBattle() {
