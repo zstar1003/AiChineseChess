@@ -70,27 +70,41 @@ class LLMPlayer:
         return None
     
     def call_deepseek_stream(self, prompt: str, player_color: str) -> str:
-        """调用DeepSeek流式API - 严格按照test_deepseek.py的逻辑"""
+        """调用DeepSeek流式API - 使用requests直接调用避免OpenAI客户端问题"""
         try:
             print(f"开始调用DeepSeek流式API，玩家颜色: {player_color}")
             
-            # 严格按照test_deepseek.py的逻辑：使用OpenAI客户端
-            from openai import OpenAI
+            # 使用 requests 直接调用流式API，避免 OpenAI 客户端的兼容性问题
+            import requests
+            import json
             
-            client = OpenAI(
-                api_key=self.api_key,
-                base_url="https://api.siliconflow.cn/v1"
-            )
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
             
-            print(f"创建OpenAI客户端，base_url: https://api.siliconflow.cn/v1")
-            
-            response = client.chat.completions.create(
-                model="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
-                messages=[
+            data = {
+                "model": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+                "messages": [
                     {"role": "user", "content": prompt}
                 ],
-                stream=True  # 启用流式输出
+                "stream": True
+            }
+            
+            print(f"发送请求到: https://api.siliconflow.cn/v1/chat/completions")
+            
+            response = requests.post(
+                "https://api.siliconflow.cn/v1/chat/completions",
+                headers=headers,
+                json=data,
+                stream=True,
+                timeout=60
             )
+            
+            if response.status_code != 200:
+                print(f"API请求失败，状态码: {response.status_code}")
+                print(f"响应内容: {response.text}")
+                return ""
             
             print("开始接收流式响应...")
             
@@ -99,52 +113,73 @@ class LLMPlayer:
             buffer = ""  # 缓冲区，用于积累内容
             buffer_size = 20  # 每20个字符发送一次，减少零碎输出
             
-            for chunk in response:
-                chunk_count += 1
-                if not chunk.choices:
-                    continue
+            # 处理流式响应
+            for line in response.iter_lines():
+                if line:
+                    chunk_count += 1
+                    line_str = line.decode('utf-8')
                     
-                delta = chunk.choices[0].delta
-                
-                # 处理普通内容
-                if delta.content:
-                    content = delta.content
-                    full_content += content
-                    buffer += content
-                
-                # 处理推理内容（DeepSeek-R1特有）
-                if hasattr(delta, "reasoning_content") and delta.reasoning_content:
-                    reasoning_content = delta.reasoning_content
-                    full_content += reasoning_content
-                    buffer += reasoning_content
-                
-                # 当缓冲区达到一定大小时发送
-                if len(buffer) >= buffer_size:
-                    print(f"发送缓冲内容 (长度{len(buffer)}): {repr(buffer[:50])}...")
-                    if self.socketio:
-                        try:
-                            # 使用Flask-SocketIO的正确方式发送事件
-                            event_data = {
-                                'player': player_color,
-                                'content': buffer,
-                                'is_complete': False
-                            }
-                            print(f"准备发送事件数据: {event_data}")
+                    # 跳过非数据行
+                    if not line_str.startswith('data: '):
+                        continue
+                    
+                    # 移除 "data: " 前缀
+                    json_str = line_str[6:]
+                    
+                    # 跳过结束标记
+                    if json_str.strip() == '[DONE]':
+                        break
+                    
+                    try:
+                        # 解析JSON数据
+                        chunk_data = json.loads(json_str)
+                        
+                        if 'choices' in chunk_data and chunk_data['choices']:
+                            delta = chunk_data['choices'][0].get('delta', {})
                             
-                            # 发送事件
-                            self.socketio.emit('thinking_stream', event_data)
-                            print(f"成功发送thinking_stream事件到{player_color}")
+                            # 处理普通内容
+                            if 'content' in delta and delta['content']:
+                                content = delta['content']
+                                full_content += content
+                                buffer += content
                             
-                            # 强制刷新Socket.IO
-                            self.socketio.sleep(0.01)
+                            # 处理推理内容（DeepSeek-R1特有）
+                            if 'reasoning_content' in delta and delta['reasoning_content']:
+                                reasoning_content = delta['reasoning_content']
+                                full_content += reasoning_content
+                                buffer += reasoning_content
                             
-                        except Exception as e:
-                            print(f"发送thinking_stream事件失败: {e}")
-                            import traceback
-                            traceback.print_exc()
-                    else:
-                        print("警告: socketio实例为None")
-                    buffer = ""  # 清空缓冲区
+                            # 当缓冲区达到一定大小时发送
+                            if len(buffer) >= buffer_size:
+                                print(f"发送缓冲内容 (长度{len(buffer)}): {repr(buffer[:50])}...")
+                                if self.socketio:
+                                    try:
+                                        # 使用Flask-SocketIO的正确方式发送事件
+                                        event_data = {
+                                            'player': player_color,
+                                            'content': buffer,
+                                            'is_complete': False
+                                        }
+                                        print(f"准备发送事件数据: {event_data}")
+                                        
+                                        # 发送事件
+                                        self.socketio.emit('thinking_stream', event_data)
+                                        print(f"成功发送thinking_stream事件到{player_color}")
+                                        
+                                        # 强制刷新Socket.IO
+                                        self.socketio.sleep(0.01)
+                                        
+                                    except Exception as e:
+                                        print(f"发送thinking_stream事件失败: {e}")
+                                        import traceback
+                                        traceback.print_exc()
+                                else:
+                                    print("警告: socketio实例为None")
+                                buffer = ""  # 清空缓冲区
+                    
+                    except json.JSONDecodeError as e:
+                        print(f"解析JSON失败: {e}, 原始数据: {json_str}")
+                        continue
             
             # 发送剩余的缓冲内容
             if buffer:
@@ -243,6 +278,31 @@ class LLMPlayer:
             print(f"Gemini流式API调用失败: {e}")
             return ""
     
+    def format_board_display(self, board_state: str) -> str:
+        """将棋盘状态转换为更直观的显示格式"""
+        try:
+            # 将棋盘状态按行分割
+            lines = board_state.strip().split('\n')
+            if len(lines) != 10:
+                return board_state  # 如果格式不正确，返回原始状态
+            
+            # 添加列标识
+            display = "  a b c d e f g h i\n"
+            
+            for i, line in enumerate(lines):
+                # 添加行号和棋子，用空格分隔
+                row_display = f"{i} "
+                for j, char in enumerate(line):
+                    if j < len(line):
+                        row_display += char + " "
+                display += row_display.rstrip() + "\n"
+            
+            return display
+            
+        except Exception as e:
+            print(f"格式化棋盘显示时出错: {e}")
+            return board_state
+
     def build_chess_prompt(self, board_state: str, move_history: List[dict]) -> str:
         """构建中国象棋提示词"""
         
@@ -257,13 +317,35 @@ class LLMPlayer:
         # 当前轮次
         current_turn = "红方" if len(move_history) % 2 == 0 else "黑方"
         
+        # 将棋盘状态转换为更直观的显示
+        board_display = self.format_board_display(board_state)
+        
         # 棋盘说明
-        board_explanation = """
+        board_explanation = f"""
 棋盘格式说明：
 - 大写字母代表红方棋子：K=帅, A=仕, B=相, N=马, R=车, C=炮, P=兵
 - 小写字母代表黑方棋子：k=将, a=士, b=象, n=马, r=车, c=炮, p=卒
 - '.' 代表空位
 - 坐标系统：列用a-i表示(从左到右)，行用0-9表示(从上到下)
+
+当前棋盘状态（带坐标）：
+{board_display}
+
+【重要规则 - 必须严格遵守】：
+1. 绝对不能移动到己方棋子占据的位置！
+   - 红方棋子（大写字母）不能移动到有其他红方棋子的位置
+   - 黑方棋子（小写字母）不能移动到有其他黑方棋子的位置
+2. 只能移动到空位（'.'）或吃掉对方棋子的位置
+3. 必须遵守各棋子的移动规则
+4. 兵/卒过河前只能向前，过河后可以左右移动
+5. 炮吃子需要跳过一个棋子，不吃子时路径必须畅通
+
+【棋步验证步骤】：
+在选择棋步前，请务必检查：
+1. 起始位置是否有你的棋子？
+2. 目标位置是否为空位或对方棋子？
+3. 移动路径是否符合该棋子的规则？
+4. 是否违反了任何象棋规则？
 """
         
         prompt = f"""你是一位中国象棋大师，正在进行一场中国象棋对局。
@@ -271,7 +353,6 @@ class LLMPlayer:
 {board_explanation}
 
 当前局面信息：
-- 棋盘状态: {board_state}
 - 当前轮次: {current_turn}
 - 总步数: {len(move_history)}
 
@@ -281,29 +362,27 @@ class LLMPlayer:
 请分析当前局面并选择你的下一步棋。
 
 要求：
-1. 仔细分析当前局面的优劣势
-2. 考虑可能的战术和战略（如：开局布阵、中局攻杀、残局技巧）
-3. 选择最佳的下一步棋
-4. 用坐标格式返回你的棋步（如：a0a1表示从a0移动到a1）
+1. 仔细观察棋盘，确认每个位置的棋子
+2. 分析当前局面的优劣势
+3. 考虑可能的战术和战略
+4. 选择一个合法有效的棋步
+5. 用坐标格式返回你的棋步（如：a0a1表示从a0移动到a1）
 
 中国象棋规则提醒：
-- 帅/将只能在九宫格内移动
+- 帅/将只能在九宫格内移动，一次一格
 - 士/仕只能在九宫格内斜走
-- 相/象不能过河，走田字
+- 相/象不能过河，走田字，不能被塞象眼
 - 马走日字，但可能被蹩腿
-- 车走直线
-- 炮走直线，吃子需要跳过一个棋子
+- 车走直线，路径必须畅通
+- 炮走直线，吃子需要跳过一个棋子，不吃子时路径必须畅通
 - 兵/卒过河前只能向前，过河后可以左右移动
 
 请按以下格式回复：
-分析：[你对当前局面的分析]
+分析：[你对当前局面的分析，包括棋子位置观察]
 策略：[你的下棋策略]
 棋步：[坐标格式的棋步，如a0a1]
 
-示例：
-分析：当前开局阶段，需要快速出子控制中路
-策略：先手出炮控制中路，为后续攻击做准备
-棋步：b7b4
+注意：请确保你的棋步是合法的，不要移动到己方棋子占据的位置！
 """
         return prompt
     
