@@ -105,20 +105,38 @@ def run_battle():
                 # 记录棋步
                 current_battle.log_move(current_player.display_name, move_result)
                 
-                # 发送棋步更新
-                socketio.emit('move_made', {
+                # 获取更新后的棋盘状态
+                updated_board_state = current_battle.game.get_board_state()
+                board_unicode = current_battle.game.get_board_unicode()
+                
+                print(f"棋步执行成功，更新后的棋盘状态: {updated_board_state}")
+                print(f"棋盘Unicode显示:\n{board_unicode}")
+                
+                # 发送棋步更新事件
+                move_data = {
                     'player': current_player.display_name,
+                    'player_color': current_battle.game.current_player,  # 注意：这里是下一个玩家的颜色
                     'move': move_result['move'],
                     'thinking': move_result.get('thinking', ''),
-                    'board_state': current_battle.game.get_board_state(),
+                    'board_state': updated_board_state,
+                    'board_unicode': board_unicode,
                     'move_count': len(current_battle.game.move_history),
-                    'history': current_battle.battle_log[-10:]  # 最近10步
-                })
+                    'history': current_battle.battle_log[-10:],  # 最近10步
+                    'current_player': current_battle.game.current_player,
+                    'is_game_over': current_battle.game.is_game_over()
+                }
+                
+                print(f"准备发送move_made事件: {move_data}")
+                socketio.emit('move_made', move_data)
+                print(f"move_made事件已发送")
+                
+                # 强制刷新Socket.IO
+                socketio.sleep(0.1)
                 
                 print(f"{current_player.display_name} 走了: {move_result['move']}")
                 
                 # 短暂延迟，便于观察
-                time.sleep(2)
+                time.sleep(1)
                 
             else:
                 # 无效棋步，结束游戏

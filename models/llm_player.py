@@ -225,18 +225,18 @@ class LLMPlayer:
     def call_gemini_stream(self, prompt: str, player_color: str) -> str:
         """调用Gemini流式API"""
         try:
+            from google import genai
+            
+            # 创建客户端（API密钥从环境变量获取）
             client = genai.Client(api_key=self.api_key)
             
             # 构建完整的提示
             full_prompt = f"你是一位专业的中国象棋大师，擅长分析局面和制定策略。\n\n{prompt}"
             
+            # 生成内容
             response = client.models.generate_content(
                 model="gemini-2.5-flash",
-                contents=full_prompt,
-                config=genai.GenerateContentConfig(
-                    temperature=0.7,
-                    max_output_tokens=500
-                )
+                contents=full_prompt
             )
             
             # Gemini API目前不支持真正的流式输出，我们模拟流式效果
@@ -276,6 +276,8 @@ class LLMPlayer:
             
         except Exception as e:
             print(f"Gemini流式API调用失败: {e}")
+            import traceback
+            traceback.print_exc()
             return ""
     
     def format_board_display(self, board_state: str) -> str:
