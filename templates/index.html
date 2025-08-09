@@ -17,11 +17,10 @@
                     <div class="player-config">
                         <select id="red-model" class="model-select">
                             <option value="deepseek-ai/DeepSeek-V3">DeepSeek-V3</option>
-                            <option value="Qwen/Qwen3-235B-A22B-Instruct-2507">Qwen3-235B-A22B-Instruct-2507</option>
                         </select>
-                        <input type="text" id="red-api-key" class="api-input" placeholder="输入硅基流动 API Key" value="sk-lsppjamzxrcfktjogxxakhpvebzdpcusuvystaziktgfsmfy">
-                        <input type="text" id="red-display-name" class="name-input" placeholder="显示名称" value="DeepSeek-V3" readonly>
-                        <input type="text" id="red-base-url" class="url-input" placeholder="Base URL (可选)" value="https://api.siliconflow.cn/v1" readonly>
+                        <input type="text" id="red-api-key" class="api-input" placeholder="输入硅基流动 API Key">
+                        <input type="hidden" id="red-display-name" value="DeepSeek-V3">
+                        <input type="hidden" id="red-base-url" value="https://api.siliconflow.cn/v1">
                     </div>
                 </div>
 
@@ -32,8 +31,8 @@
                             <option value="gemini-2.5-flash">Gemini-2.5-Flash</option>
                         </select>
                         <input type="text" id="black-api-key" class="api-input" placeholder="输入Google API Key">
-                        <input type="text" id="black-display-name" class="name-input" placeholder="显示名称" value="Gemini-2.5-Flash">
-                        <input type="text" id="black-base-url" class="url-input" placeholder="Base URL (可选)" value="https://generativelanguage.googleapis.com/v1beta">
+                        <input type="hidden" id="black-display-name" value="Gemini-2.5-Flash">
+                        <input type="hidden" id="black-base-url" value="https://generativelanguage.googleapis.com/v1beta">
                     </div>
                 </div>
 
