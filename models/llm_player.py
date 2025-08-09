@@ -18,12 +18,13 @@ class LLMPlayer:
         self.total_thinking_time = 0
         self.socketio = socketio
     
-    def get_move(self, board_state: str, move_history: List[dict]) -> Optional[Dict]:
+    def get_move(self, board_state: str, move_history: List[dict], legal_moves: List[str] = None) -> Optional[Dict]:
         """获取模型的下一步棋（支持流式输出）
         
         Args:
             board_state: 当前棋盘状态
             move_history: 历史棋步列表
+            legal_moves: 当前所有合法棋步列表
             
         Returns:
             Dict: 包含棋步和思考过程的字典
@@ -32,7 +33,7 @@ class LLMPlayer:
         
         try:
             # 构建提示词
-            prompt = self.build_chess_prompt(board_state, move_history)
+            prompt = self.build_chess_prompt(board_state, move_history, legal_moves)
             
             # 确定玩家颜色
             player_color = "red" if len(move_history) % 2 == 0 else "black"
@@ -329,7 +330,7 @@ class LLMPlayer:
             print(f"格式化棋盘显示时出错: {e}")
             return board_state
 
-    def build_chess_prompt(self, board_state: str, move_history: List[dict]) -> str:
+    def build_chess_prompt(self, board_state: str, move_history: List[dict], legal_moves: List[str] = None) -> str:
         """构建中国象棋提示词"""
         
         # 历史棋步字符串
@@ -346,6 +347,18 @@ class LLMPlayer:
         # 将棋盘状态转换为更直观的显示
         board_display = self.format_board_display(board_state)
         
+        # 构建合法棋步列表字符串
+        legal_moves_str = ""
+        if legal_moves:
+            legal_moves_str = f"""
+【当前所有合法棋步】：
+你必须从以下合法棋步中选择一个：
+{', '.join(legal_moves[:50])}  # 显示前50个合法棋步
+总共有 {len(legal_moves)} 个合法棋步可选择。
+
+重要提醒：你只能选择上述列表中的棋步！选择其他棋步将导致游戏中断！
+"""
+        
         # 棋盘说明
         board_explanation = f"""
 棋盘格式说明：
@@ -357,21 +370,21 @@ class LLMPlayer:
 当前棋盘状态（带坐标）：
 {board_display}
 
-【重要规则 - 必须严格遵守】：
-1. 绝对不能移动到己方棋子占据的位置！
-   - 红方棋子（大写字母）不能移动到有其他红方棋子的位置
-   - 黑方棋子（小写字母）不能移动到有其他黑方棋子的位置
-2. 只能移动到空位（'.'）或吃掉对方棋子的位置
-3. 必须遵守各棋子的移动规则
-4. 兵/卒过河前只能向前，过河后可以左右移动
-5. 炮吃子需要跳过一个棋子，不吃子时路径必须畅通
+{legal_moves_str}
 
-【棋步验证步骤】：
-在选择棋步前，请务必检查：
-1. 起始位置是否有你的棋子？
-2. 目标位置是否为空位或对方棋子？
-3. 移动路径是否符合该棋子的规则？
-4. 是否违反了任何象棋规则？
+【重要规则 - 必须严格遵守】：
+1. 你必须从上面提供的合法棋步列表中选择！
+2. 绝对不能移动到己方棋子占据的位置！
+3. 只能移动到空位（'.'）或吃掉对方棋子的位置
+4. 必须遵守各棋子的移动规则
+5. 兵/卒过河前只能向前，过河后可以左右移动
+6. 炮吃子需要跳过一个棋子，不吃子时路径必须畅通
+
+【棋步选择步骤】：
+1. 仔细查看上面提供的合法棋步列表
+2. 分析每个合法棋步的战术价值
+3. 从合法棋步中选择最佳的一个
+4. 确保你选择的棋步在合法列表中！
 """
         
         prompt = f"""你是一位中国象棋大师，正在进行一场中国象棋对局。
@@ -388,11 +401,11 @@ class LLMPlayer:
 请分析当前局面并选择你的下一步棋。
 
 要求：
-1. 仔细观察棋盘，确认每个位置的棋子
+1. 仔细查看上面提供的合法棋步列表
 2. 分析当前局面的优劣势
 3. 考虑可能的战术和战略
-4. 选择一个合法有效的棋步
-5. 用坐标格式返回你的棋步（如：a0a1表示从a0移动到a1）
+4. 从合法棋步列表中选择最佳的一个棋步
+5. 确保你选择的棋步在合法列表中！
 
 中国象棋规则提醒：
 - 帅/将只能在九宫格内移动，一次一格
@@ -405,10 +418,10 @@ class LLMPlayer:
 
 请按以下格式回复：
 分析：[你对当前局面的分析，包括棋子位置观察]
-策略：[你的下棋策略]
-棋步：[坐标格式的棋步，如a0a1]
+策略：[你的下棋策略和从合法棋步中的选择理由]
+棋步：[从合法棋步列表中选择的棋步，如a0a1]
 
-注意：请确保你的棋步是合法的，不要移动到己方棋子占据的位置！
+重要提醒：你必须从上面提供的合法棋步列表中选择！选择其他棋步将导致游戏中断！
 """
         return prompt
     

@@ -102,7 +102,7 @@ def run_battle():
                     # 调用真实的AI模型获取棋步
                     board_state = current_battle.game.get_board_state()
                     move_history = current_battle.game.move_history
-                    move_result = current_player.get_move(board_state, move_history)
+                    move_result = current_player.get_move(board_state, move_history, legal_moves)
                     
                     print(f"AI返回的棋步结果: {move_result}")
                     
