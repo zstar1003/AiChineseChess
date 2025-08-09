@@ -776,6 +776,12 @@ function handleMoveMade(data) {
         gameState.boardState = data.board_state;
     }
     
+    // 更新当前执棋方显示
+    if (data.current_player) {
+        updateCurrentPlayer(data.current_player);
+        gameState.currentPlayer = data.current_player;
+    }
+    
     // 更新统计信息
     gameState.moveCount = data.move_count || 0;
     document.getElementById('total-moves').textContent = gameState.moveCount;
