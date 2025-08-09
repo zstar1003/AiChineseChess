@@ -30,12 +30,12 @@ def start_battle():
     
     try:
         # 创建玩家实例（传入socketio实例以支持流式输出）
-        # 红方固定使用DeepSeek-R1模型
+        # 红方使用DeepSeek-V3模型，通过SiliconFlow API
         red_player = LLMPlayer(
-            model_name="deepseek-ai/DeepSeek-R1",  # 严格按照test_deepseek.py的模型名称
+            model_name="deepseek-ai/DeepSeek-V3",
             api_key=red_config['api_key'],
-            base_url="https://api.siliconflow.cn/v1",  # 固定使用SiliconFlow API
-            display_name="DeepSeek-R1",
+            base_url="https://api.siliconflow.cn/v1",  # 继续使用SiliconFlow API
+            display_name=red_config.get('display_name', "DeepSeek-V3"),
             socketio=socketio
         )
         
@@ -83,28 +83,20 @@ def run_battle():
                 'message': f'{current_player.display_name} 正在思考...'
             })
             
-            # 临时模拟棋步，跳过API调用
-            print(f"模拟 {current_player.display_name} 的棋步...")
+            # 使用真实的模型接入获取棋步
+            print(f"{current_player.display_name} 正在思考...")
             
-            # 先打印当前棋盘状态和合法棋步
+            # 获取当前棋盘状态和合法棋步
             print(f"当前棋盘状态:\n{current_battle.game.get_board_unicode()}")
             legal_moves = current_battle.game.get_legal_moves()
-            print(f"当前合法棋步: {legal_moves[:10]}...")  # 只显示前10个
+            print(f"当前合法棋步数量: {len(legal_moves)}")
             
-            # 模拟棋步结果 - 使用第一个合法棋步
-            if legal_moves:
-                simulated_move = legal_moves[0]  # 使用第一个合法棋步
-                move_result = {
-                    'move': simulated_move,
-                    'thinking': f'模拟思考过程：选择移动棋步 {simulated_move}',
-                    'thinking_time': 1.0,
-                    'player': current_player.display_name
-                }
-            else:
-                # 没有合法棋步，游戏结束
-                move_result = None
+            # 调用真实的AI模型获取棋步
+            board_state = current_battle.game.get_board_state()
+            move_history = current_battle.game.move_history
+            move_result = current_player.get_move(board_state, move_history)
             
-            print(f"模拟棋步结果: {move_result}")
+            print(f"AI返回的棋步结果: {move_result}")
             
             if move_result and move_result['move'] and current_battle.game.make_move(move_result['move']):
                 # 记录棋步

@@ -573,10 +573,7 @@ function bindThinkingStreamEvent() {
     
     // 新增：处理流式思考过程
     socket.on('thinking_stream', function(data) {
-        console.log('=== 收到thinking_stream事件 ===');
-        console.log('原始数据:', data);
-        console.log('数据类型:', typeof data);
-        console.log('JSON字符串:', JSON.stringify(data));
+        console.log('收到thinking_stream事件:', data);
         
         // 确保数据格式正确
         if (!data || typeof data !== 'object') {
@@ -584,47 +581,41 @@ function bindThinkingStreamEvent() {
             return;
         }
         
+        const thinkingBoxId = `${data.player}-thinking-process`;
+        const thinkingBox = document.getElementById(thinkingBoxId);
+        
+        if (!thinkingBox) {
+            console.error(`找不到思考区元素: ${thinkingBoxId}`);
+            return;
+        }
+        
         if (data.is_complete) {
-            // 思考完成，添加分隔线和清理状态
+            // 思考完成，清理状态
             console.log(`${data.player}思考完成`);
-            const playerBox = document.getElementById(`${data.player}-thinking-process`);
-            if (playerBox) {
-                playerBox.innerHTML += '<hr style="margin: 10px 0; border: 1px solid rgba(255,255,255,0.2);">';
-                playerBox.scrollTop = playerBox.scrollHeight;
-            }
-            // 清理流式状态
             clearStreamingState(data.player);
             return;
         }
         
         // 流式添加思考内容
         if (data.content && data.content.length > 0) {
-            console.log(`=== 开始处理思考内容 ===`);
-            console.log(`玩家: ${data.player}`);
-            console.log(`内容长度: ${data.content.length}`);
-            console.log(`内容预览: "${data.content.substring(0, 50)}..."`);
-            console.log(`目标思考区ID: ${data.player}-thinking-process`);
-            
-            // 检查思考区是否存在
-            const thinkingBox = document.getElementById(`${data.player}-thinking-process`);
-            console.log('思考区元素查找结果:', thinkingBox);
-            
-            if (!thinkingBox) {
-                console.error(`找不到思考区元素: ${data.player}-thinking-process`);
-                // 列出所有可能的思考区元素
-                const allThinkingElements = document.querySelectorAll('[id*="thinking"]');
-                console.log('页面中所有包含thinking的元素:', allThinkingElements);
-                for (let i = 0; i < allThinkingElements.length; i++) {
-                    console.log(`  - ${allThinkingElements[i].id}: ${allThinkingElements[i].tagName}`);
-                }
-                return;
+            // 检查是否已有内容容器，如果没有则创建
+            let contentContainer = thinkingBox.querySelector('.thinking-content-stream');
+            if (!contentContainer) {
+                // 清空现有内容
+                thinkingBox.innerHTML = '';
+                // 创建新的内容容器
+                contentContainer = document.createElement('div');
+                contentContainer.className = 'thinking-content-stream';
+                contentContainer.style.whiteSpace = 'pre-wrap';
+                contentContainer.style.wordWrap = 'break-word';
+                thinkingBox.appendChild(contentContainer);
             }
             
-            console.log('找到思考区元素，调用streamThinkingProcessRealtime');
-            streamThinkingProcessRealtime(data.player, data.content);
-            console.log('=== 思考内容处理完成 ===');
-        } else {
-            console.warn('收到空内容的thinking_stream事件，内容:', data.content);
+            // 直接追加内容，不添加时间戳和装饰样式
+            contentContainer.textContent += data.content;
+            
+            // 自动滚动到底部
+            thinkingBox.scrollTop = thinkingBox.scrollHeight;
         }
     });
     

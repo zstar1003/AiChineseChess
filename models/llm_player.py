@@ -111,7 +111,7 @@ class LLMPlayer:
             full_content = ""
             chunk_count = 0
             buffer = ""  # 缓冲区，用于积累内容
-            buffer_size = 20  # 每20个字符发送一次，减少零碎输出
+            buffer_size = 5  # 每5个字符发送一次，更流畅的显示
             
             # 处理流式响应
             for line in response.iter_lines():
@@ -151,7 +151,7 @@ class LLMPlayer:
                             
                             # 当缓冲区达到一定大小时发送
                             if len(buffer) >= buffer_size:
-                                print(f"发送缓冲内容 (长度{len(buffer)}): {repr(buffer[:50])}...")
+                                # print(f"发送缓冲内容 (长度{len(buffer)}): {repr(buffer[:50])}...")
                                 if self.socketio:
                                     try:
                                         # 使用Flask-SocketIO的正确方式发送事件
@@ -160,11 +160,11 @@ class LLMPlayer:
                                             'content': buffer,
                                             'is_complete': False
                                         }
-                                        print(f"准备发送事件数据: {event_data}")
+                                        #print(f"准备发送事件数据: {event_data}")
                                         
                                         # 发送事件
                                         self.socketio.emit('thinking_stream', event_data)
-                                        print(f"成功发送thinking_stream事件到{player_color}")
+                                        # print(f"成功发送thinking_stream事件到{player_color}")
                                         
                                         # 强制刷新Socket.IO
                                         self.socketio.sleep(0.01)
