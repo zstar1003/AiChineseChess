@@ -58,3 +58,4 @@ node_modules/.cache/logger/umi.log
 *.log
 api_key.txt
 .codebuddy
+.venv

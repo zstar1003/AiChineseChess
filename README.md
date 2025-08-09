@@ -1,245 +1,133 @@
-# 大模型象棋对战系统
+# AI中国象棋对战系统
 
-一个基于大语言模型的象棋对战系统，支持不同大模型（如OpenAI o3 vs DeepSeek）进行象棋对弈，提供实时的2D可视化棋盘和详细的对战分析。
+一个基于大语言模型的中国象棋AI对战平台，支持多种主流AI模型进行实时象棋对局。
 
-## 功能特点
 
-- 🤖 **多模型支持**: 支持OpenAI GPT系列、DeepSeek、Claude等大模型
-- ♟️ **实时对战**: 两个大模型自动进行象棋对弈
-- 🎨 **2D可视化**: 清晰的2D棋盘界面，实时显示棋局变化
-- 📝 **文本描述**: 详细的棋局文字描述和模型思考过程
-- 📊 **对战分析**: 完整的棋谱记录和对战统计
-- 🔄 **实时更新**: WebSocket实时通信，无需刷新页面
+<div align="center">、
+  <h4>
+    <a href="README.md">🇨🇳 中文</a>
+    <span> | </span>
+    <a href="README_EN.md">🇬🇧 English</a>
+  </h4>
+</div>
 
-## 技术架构
 
-- **后端**: Python + Flask + Flask-SocketIO
-- **前端**: HTML + CSS + JavaScript
-- **象棋引擎**: python-chess库
-- **API调用**: OpenAI API、DeepSeek API等
-- **实时通信**: WebSocket
+## 🎯 项目特色
 
-## 项目结构
+- **多模型支持**：集成DeepSeek、Gemini、Qwen等多种大语言模型
+- **实时对战**：基于Socket.IO的实时通信，支持流式思考过程展示
+- **智能棋步**：AI模型从合法棋步中选择，避免无效移动
+- **美观界面**：现代化Web界面，支持棋盘可视化和思考过程展示
+- **自动重试**：内置重试机制，确保对战稳定进行
 
-```
-chess-llm-battle/
-├── app.py                  # 主应用文件
-├── config.py              # 配置文件
-├── requirements.txt       # Python依赖
-├── .env.example          # 环境变量示例
-├── README.md             # 项目说明
-├── models/               # 核心模块
-│   ├── __init__.py
-│   ├── chess_game.py     # 象棋游戏逻辑
-│   ├── llm_player.py     # 大模型玩家
-│   └── battle.py         # 对战管理
-├── templates/            # HTML模板
-│   └── index.html        # 主页面
-└── static/              # 静态文件
-    ├── css/
-    │   └── style.css     # 样式文件
-    └── js/
-        └── chess.js      # 前端JavaScript
-```
+## 🏗️ 效果演示
 
-## 安装部署
+[![DeepSeek vs Gemini](assets/image.jpg)](https://www.bilibili.com/video/BV1M9thzRE56)
 
-### 1. 环境要求
+## 🚀 快速开始
+
+### 环境要求
 
 - Python 3.8+
-- pip包管理器
+- Flask
+- Flask-SocketIO
+- requests
+- google-genai
 
-### 2. 克隆项目
-
-```bash
-git clone https://github.com/your-username/chess-llm-battle.git
-cd chess-llm-battle
-```
-
-### 3. 安装依赖
+### 安装依赖
 
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
-### 4. 配置环境变量
-
-```bash
-# 复制环境变量模板
-cp .env.example .env
-
-# 编辑.env文件，填入你的API密钥
-nano .env
-```
-
-在`.env`文件中配置你的API密钥：
-
-```env
-# OpenAI API配置
-OPENAI_API_KEY=sk-your-actual-openai-api-key
-
-# DeepSeek API配置
-DEEPSEEK_API_KEY=sk-your-actual-deepseek-api-key
-DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
-
-# Flask配置
-SECRET_KEY=your-random-secret-key
-```
-
-### 5. 启动应用
+### 启动应用
 
 ```bash
 python app.py
 ```
 
-### 6. 访问系统
+访问 `http://localhost:5003` 开始使用。
 
-打开浏览器访问：http://localhost:5000
+## 🎮 使用说明
 
-## 使用说明
+### 1. 选择AI模型
 
-### 1. 配置模型
-
-1. 在左侧控制面板中选择红方和黑方的大模型
-2. 填入相应的API密钥
-3. 设置显示名称（可选）
+- **红方**：支持DeepSeek-V3、Qwen等模型
+- **黑方**：支持Gemini等模型
 
 ### 2. 开始对战
 
-1. 点击"开始对战"按钮
-2. 系统将自动开始两个模型的对弈
-3. 观察棋盘上的实时变化
+1. 在界面上选择红方和黑方的AI模型
+2. 点击"开始对战"按钮
+3. 观看AI实时思考和下棋过程
 
-### 3. 观察对战
+### 3. 功能特性
 
-- **棋盘区域**: 显示当前棋局状态
-- **思考过程**: 显示模型的分析和策略
-- **棋谱记录**: 完整的对战历史
-- **对战日志**: 详细的操作记录
+- **实时思考展示**：查看AI的思考过程和策略分析
+- **棋步历史**：完整的对局记录和棋步回放
+- **自动滚动**：游戏信息自动滚动到最新内容
+- **错误处理**：智能重试机制，处理API超时和无效棋步
 
-### 4. 对战控制
+## 🔧 技术架构
 
-- **停止对战**: 中途停止当前对战
-- **重置游戏**: 清空所有记录，重新开始
+### 后端技术栈
 
-## 支持的模型
+- **Flask**：Web框架
+- **Flask-SocketIO**：实时通信
+- **Python**：核心逻辑实现
 
-### OpenAI系列
-- GPT-4
-- GPT-4 Turbo  
-- OpenAI o3-mini
-- OpenAI o3
+### 前端技术栈
 
-### DeepSeek系列
-- DeepSeek Chat
-- DeepSeek Coder
+- **HTML5/CSS3**：界面布局和样式
+- **JavaScript**：交互逻辑
+- **Socket.IO Client**：实时通信
 
-### Claude系列
-- Claude 3 Sonnet
-- Claude 3 Opus
+### AI模型集成
 
-## API配置说明
+- **SiliconFlow API**：统一的模型调用接口
+- **流式输出**：支持实时思考过程展示
+- **多模型适配**：兼容不同API格式
 
-### OpenAI API
-```python
-# 需要配置
-OPENAI_API_KEY = "sk-your-key"
-```
+## 🎯 核心功能
 
-### DeepSeek API
-```python
-# 需要配置
-DEEPSEEK_API_KEY = "sk-your-key"
-DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
-```
+### AI玩家系统 (`models/llm_player.py`)
 
-### Claude API
-```python
-# 需要配置
-CLAUDE_API_KEY = "your-key"
-```
+- 支持多种AI模型的统一接口
+- 流式思考过程输出
+- 智能提示词构建，包含合法棋步列表
+- 自动解析AI响应并提取棋步
 
-## 开发说明
+### 象棋游戏引擎 (`models/chess_game.py`)
 
-### 核心模块
+- 完整的中国象棋规则实现
+- 合法棋步生成和验证
+- 游戏状态管理
+- 棋盘可视化
 
-1. **ChessGame**: 象棋游戏核心逻辑
-   - 棋盘状态管理
-   - 合法性检查
-   - 游戏结束判定
+### 对战管理系统 (`models/battle.py`)
 
-2. **LLMPlayer**: 大模型玩家
-   - API调用封装
-   - 提示词构建
-   - 响应解析
+- 对战流程控制
+- 棋步记录和历史管理
+- 游戏结果统计
 
-3. **ChessBattle**: 对战管理
-   - 对战流程控制
-   - 日志记录
-   - 结果统计
+### 实时通信 (`app.py`)
 
-### 前端组件
+- Socket.IO事件处理
+- 后台任务管理
+- 错误处理和重试机制
 
-1. **ChessBoardRenderer**: 棋盘渲染器
-   - 2D Canvas绘制
-   - 棋子显示
-   - 移动高亮
+## 🛠️ 开发说明
 
-2. **Socket事件处理**: 实时通信
-   - 棋步更新
-   - 思考状态
-   - 游戏结果
+### 添加新的AI模型
 
-## 故障排除
+1. 在 `models/llm_player.py` 中添加新的API调用方法
+2. 在 `templates/index.html` 中添加模型选项
+3. 更新 `static/js/chess.js` 中的模型配置
 
-### 常见问题
+### 自定义棋盘样式
 
-1. **API调用失败**
-   - 检查API密钥是否正确
-   - 确认网络连接正常
-   - 验证API配额是否充足
+修改 `static/css/style.css` 中的相关样式类：
 
-2. **棋步解析错误**
-   - 模型返回格式不正确
-   - 提示词需要优化
-   - 增加错误处理逻辑
-
-3. **界面显示异常**
-   - 检查浏览器控制台错误
-   - 确认静态文件加载正常
-   - 验证WebSocket连接状态
-
-### 调试模式
-
-启用Flask调试模式：
-
-```bash
-export FLASK_ENV=development
-python app.py
-```
-
-## 贡献指南
-
-1. Fork本项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启Pull Request
-
-## 许可证
-
-本项目采用MIT许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
-## 联系方式
-
-- 项目链接: https://github.com/your-username/chess-llm-battle
-- 问题反馈: https://github.com/your-username/chess-llm-battle/issues
-
-## 更新日志
-
-### v1.0.0 (2024-08-07)
-- 初始版本发布
-- 支持OpenAI和DeepSeek模型对战
-- 实现2D棋盘可视化
-- 添加实时WebSocket通信
-- 完整的对战记录和分析功能
+- `.chess-board` - 棋盘容器
+- `.chess-piece` - 棋子样式
+- `.thinking-content` - 思考框样式
