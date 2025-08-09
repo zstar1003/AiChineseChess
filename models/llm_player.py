@@ -99,7 +99,7 @@ class LLMPlayer:
             }
             
             data = {
-                "model": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+                "model": self.model_name,
                 "messages": [
                     {"role": "user", "content": prompt}
                 ],

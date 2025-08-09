@@ -30,12 +30,12 @@ def start_battle():
     
     try:
         # 创建玩家实例（传入socketio实例以支持流式输出）
-        # 红方使用DeepSeek-V3模型，通过SiliconFlow API
+        # 红方使用前端选择的模型，通过SiliconFlow API
         red_player = LLMPlayer(
-            model_name="deepseek-ai/DeepSeek-V3",
+            model_name=red_config['model_name'],
             api_key=red_config['api_key'],
-            base_url="https://api.siliconflow.cn/v1",  # 继续使用SiliconFlow API
-            display_name=red_config.get('display_name', "DeepSeek-V3"),
+            base_url=red_config.get('base_url', "https://api.siliconflow.cn/v1"),
+            display_name=red_config.get('display_name', red_config['model_name']),
             socketio=socketio
         )
         

@@ -735,14 +735,11 @@ function updateModelSettings() {
     const blackModel = document.getElementById('black-model').value;
     
     // 更新红方显示名称（使用硅基流动API）
-    if (redModel.includes('deepseek-r1')) {
-        if (redModel.includes('distill-llama')) {
-            document.getElementById('red-display-name').value = 'DeepSeek-R1-Distill-Llama-70B';
-        } else if (redModel.includes('distill-qwen')) {
-            document.getElementById('red-display-name').value = 'DeepSeek-R1-Distill-Qwen-32B';
-        } else {
-            document.getElementById('red-display-name').value = 'DeepSeek-R1';
-        }
+    if (redModel.includes('DeepSeek-V3')) {
+        document.getElementById('red-display-name').value = 'DeepSeek-V3';
+        document.getElementById('red-base-url').value = 'https://api.siliconflow.cn/v1';
+    } else if (redModel.includes('Qwen3-235B-A22B-Instruct-2507')) {
+        document.getElementById('red-display-name').value = 'Qwen3-235B-A22B-Instruct-2507';
         document.getElementById('red-base-url').value = 'https://api.siliconflow.cn/v1';
     }
     
