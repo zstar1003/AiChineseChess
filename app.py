@@ -91,57 +91,86 @@ def run_battle():
             legal_moves = current_battle.game.get_legal_moves()
             print(f"当前合法棋步数量: {len(legal_moves)}")
             
-            # 调用真实的AI模型获取棋步
-            board_state = current_battle.game.get_board_state()
-            move_history = current_battle.game.move_history
-            move_result = current_player.get_move(board_state, move_history)
+            # 重试机制：最多尝试3次获取有效棋步
+            max_retries = 3
+            valid_move_found = False
             
-            print(f"AI返回的棋步结果: {move_result}")
+            for attempt in range(max_retries):
+                try:
+                    print(f"第 {attempt + 1} 次尝试获取 {current_player.display_name} 的棋步...")
+                    
+                    # 调用真实的AI模型获取棋步
+                    board_state = current_battle.game.get_board_state()
+                    move_history = current_battle.game.move_history
+                    move_result = current_player.get_move(board_state, move_history)
+                    
+                    print(f"AI返回的棋步结果: {move_result}")
+                    
+                    # 检查是否获得有效的棋步结果
+                    if move_result and move_result.get('move'):
+                        # 尝试执行棋步
+                        if current_battle.game.make_move(move_result['move']):
+                            # 棋步有效，记录并发送更新
+                            current_battle.log_move(current_player.display_name, move_result)
+                            
+                            # 获取更新后的棋盘状态
+                            updated_board_state = current_battle.game.get_board_state()
+                            board_unicode = current_battle.game.get_board_unicode()
+                            
+                            print(f"棋步执行成功，更新后的棋盘状态: {updated_board_state}")
+                            print(f"棋盘Unicode显示:\n{board_unicode}")
+                            
+                            # 发送棋步更新事件
+                            move_data = {
+                                'player': current_player.display_name,
+                                'player_color': current_battle.game.current_player,  # 注意：这里是下一个玩家的颜色
+                                'move': move_result['move'],
+                                'thinking': move_result.get('thinking', ''),
+                                'board_state': updated_board_state,
+                                'board_unicode': board_unicode,
+                                'move_count': len(current_battle.game.move_history),
+                                'history': current_battle.battle_log[-10:],  # 最近10步
+                                'current_player': current_battle.game.current_player,
+                                'is_game_over': current_battle.game.is_game_over()
+                            }
+                            
+                            print(f"准备发送move_made事件: {move_data}")
+                            socketio.emit('move_made', move_data)
+                            print(f"move_made事件已发送")
+                            
+                            # 强制刷新Socket.IO
+                            socketio.sleep(0.1)
+                            
+                            print(f"{current_player.display_name} 走了: {move_result['move']}")
+                            valid_move_found = True
+                            break
+                        else:
+                            print(f"第 {attempt + 1} 次尝试：无效棋步 {move_result['move']}")
+                    else:
+                        print(f"第 {attempt + 1} 次尝试：AI未返回有效棋步结果")
+                    
+                    # 如果不是最后一次尝试，等待一段时间再重试
+                    if attempt < max_retries - 1:
+                        print(f"等待2秒后进行第 {attempt + 2} 次尝试...")
+                        time.sleep(2)
+                        
+                except Exception as e:
+                    print(f"第 {attempt + 1} 次尝试时发生异常: {e}")
+                    if attempt < max_retries - 1:
+                        print(f"等待3秒后进行第 {attempt + 2} 次尝试...")
+                        time.sleep(3)
+                    else:
+                        print("所有重试都失败了")
             
-            if move_result and move_result['move'] and current_battle.game.make_move(move_result['move']):
-                # 记录棋步
-                current_battle.log_move(current_player.display_name, move_result)
-                
-                # 获取更新后的棋盘状态
-                updated_board_state = current_battle.game.get_board_state()
-                board_unicode = current_battle.game.get_board_unicode()
-                
-                print(f"棋步执行成功，更新后的棋盘状态: {updated_board_state}")
-                print(f"棋盘Unicode显示:\n{board_unicode}")
-                
-                # 发送棋步更新事件
-                move_data = {
-                    'player': current_player.display_name,
-                    'player_color': current_battle.game.current_player,  # 注意：这里是下一个玩家的颜色
-                    'move': move_result['move'],
-                    'thinking': move_result.get('thinking', ''),
-                    'board_state': updated_board_state,
-                    'board_unicode': board_unicode,
-                    'move_count': len(current_battle.game.move_history),
-                    'history': current_battle.battle_log[-10:],  # 最近10步
-                    'current_player': current_battle.game.current_player,
-                    'is_game_over': current_battle.game.is_game_over()
-                }
-                
-                print(f"准备发送move_made事件: {move_data}")
-                socketio.emit('move_made', move_data)
-                print(f"move_made事件已发送")
-                
-                # 强制刷新Socket.IO
-                socketio.sleep(0.1)
-                
-                print(f"{current_player.display_name} 走了: {move_result['move']}")
-                
-                # 短暂延迟，便于观察
-                time.sleep(1)
-                
-            else:
-                # 无效棋步，结束游戏
-                print(f"无效棋步: {move_result}")
-                socketio.emit('game_error', {
-                    'message': f'{current_player.display_name} 产生了无效棋步'
-                })
+            # 如果所有重试都失败，发送错误并结束游戏
+            if not valid_move_found:
+                error_msg = f'{current_player.display_name} 在 {max_retries} 次尝试后仍无法产生有效棋步'
+                print(error_msg)
+                socketio.emit('game_error', {'message': error_msg})
                 break
+            
+            # 短暂延迟，便于观察
+            time.sleep(1)
                 
         except Exception as e:
             print(f"对战过程中出现异常: {e}")

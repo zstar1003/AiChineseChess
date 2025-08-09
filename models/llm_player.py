@@ -37,7 +37,10 @@ class LLMPlayer:
             # 确定玩家颜色
             player_color = "red" if len(move_history) % 2 == 0 else "black"
             
+            print(f"开始获取 {self.display_name} 的棋步...")
+            
             # 调用相应的流式API
+            response = ""
             if "deepseek" in self.model_name.lower():
                 response = self.call_deepseek_stream(prompt, player_color)
             elif "gemini" in self.model_name.lower():
@@ -51,6 +54,13 @@ class LLMPlayer:
                 else:
                     response = self.call_generic_api(prompt)
             
+            print(f"API调用完成，响应长度: {len(response) if response else 0}")
+            
+            # 检查响应是否为空
+            if not response or response.strip() == "":
+                print(f"{self.display_name} API返回空响应")
+                return None
+            
             # 解析响应
             move_info = self.parse_response(response)
             
@@ -62,12 +72,17 @@ class LLMPlayer:
             if move_info:
                 move_info['thinking_time'] = thinking_time
                 move_info['player'] = self.display_name
+                print(f"{self.display_name} 成功获取棋步: {move_info.get('move')}")
                 return move_info
+            else:
+                print(f"{self.display_name} 无法解析出有效棋步")
+                return None
             
         except Exception as e:
             print(f"获取{self.display_name}棋步时出错: {e}")
-        
-        return None
+            import traceback
+            traceback.print_exc()
+            return None
     
     def call_deepseek_stream(self, prompt: str, player_color: str) -> str:
         """调用DeepSeek流式API - 使用requests直接调用避免OpenAI客户端问题"""
@@ -98,7 +113,7 @@ class LLMPlayer:
                 headers=headers,
                 json=data,
                 stream=True,
-                timeout=60
+                timeout=90  # 增加超时时间到90秒
             )
             
             if response.status_code != 200:
@@ -216,6 +231,15 @@ class LLMPlayer:
             
             return full_content
                 
+        except requests.exceptions.ReadTimeout as e:
+            print(f"DeepSeek API读取超时: {e}")
+            return ""
+        except requests.exceptions.ConnectionError as e:
+            print(f"DeepSeek API连接错误: {e}")
+            return ""
+        except requests.exceptions.RequestException as e:
+            print(f"DeepSeek API请求异常: {e}")
+            return ""
         except Exception as e:
             print(f"DeepSeek流式API调用失败: {e}")
             import traceback
