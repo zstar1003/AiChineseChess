@@ -1,9 +1,9 @@
 # AI中国象棋对战系统
 
-一个基于大语言模型的中国象棋AI对战平台，支持多种主流AI模型进行实时象棋对局。
+一个基于大语言模型的中国象棋AI对战平台，使用AI模型进行实时象棋对局。
 
 
-<div align="center">、
+<div align="center">
   <h4>
     <a href="README.md">🇨🇳 中文</a>
     <span> | </span>

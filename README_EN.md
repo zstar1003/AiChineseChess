@@ -1,8 +1,8 @@
 # AI Chinese Chess Battle System
 
-An AI-powered Chinese Chess battle platform based on Large Language Models, supporting real-time matches between various mainstream AI models.
+A large language model-based Chinese chess AI battle platform that enables real-time chess matches powered by AI models.
 
-<div align="center">、
+<div align="center">
   <h4>
     <a href="README.md">🇨🇳 中文</a>
     <span> | </span>
@@ -18,27 +18,9 @@ An AI-powered Chinese Chess battle platform based on Large Language Models, supp
 - **Beautiful Interface**: Modern web UI with chess board visualization and thinking process display
 - **Auto Retry**: Built-in retry mechanism ensures stable battles
 
-## 🏗️ Project Structure
+## 🏗️ Demo
 
-```
-AiChineseChess/
-├── app.py                 # Flask main application, Socket.IO server
-├── config.py             # Configuration file
-├── requirements.txt      # Python dependencies
-├── api_key.txt          # API key configuration
-├── models/              # Core model modules
-│   ├── chess_game.py    # Chess game logic
-│   ├── llm_player.py    # AI player implementation
-│   └── battle.py        # Battle management
-├── static/              # Static resources
-│   ├── css/
-│   │   └── style.css    # Stylesheet
-│   └── js/
-│       └── chess.js     # Frontend JavaScript logic
-├── templates/           # HTML templates
-│   └── index.html       # Main page
-└── test_*.py           # Test files
-```
+[![DeepSeek vs Gemini](assets/image.jpg)](https://www.bilibili.com/video/BV1M9thzRE56)
 
 ## 🚀 Quick Start
 
