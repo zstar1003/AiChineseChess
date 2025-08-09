@@ -199,6 +199,7 @@ body::before {
     height: 100%;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .control-panel .panel-section:last-child {
@@ -295,6 +296,8 @@ body::before {
     background: #f8f9fa;
     padding: 15px;
     border-radius: 8px;
+    max-height: 120px;
+    overflow-y: auto;
 }
 
 .stat-item {
@@ -442,10 +445,11 @@ body::before {
 
 .info-panel .panel-section:nth-child(2),
 .info-panel .panel-section:nth-child(3) {
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     min-height: 0;
+    max-height: 350px;
 }
 
 .info-panel .panel-section:last-child {
@@ -470,12 +474,14 @@ body::before {
     background: #f8f9fa;
     padding: 15px;
     border-radius: 8px;
-    height: 250px;
+    height: 300px;
+    max-height: 300px;
     overflow-y: auto;
     font-size: 0.9em;
-    line-height: 1.5;
+    line-height: 1.4;
     border: 1px solid #e0e0e0;
     font-family: 'Courier New', monospace;
+    flex-shrink: 0;
 }
 
 .thinking-content::-webkit-scrollbar {
@@ -570,10 +576,118 @@ body::before {
     background: #f8f9fa;
     padding: 15px;
     border-radius: 8px;
-    max-height: 200px;
+    height: 180px;
+    max-height: 180px;
     overflow-y: auto;
     font-size: 0.9em;
-    line-height: 1.5;
+    line-height: 1.4;
+    border: 2px solid #e0e0e0;
+}
+
+/* 游戏信息区域特殊样式 */
+.battle-log {
+    background: #ffffff;
+    border: 2px solid #3498db;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    transition: all 0.3s ease;
+    height: 300px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.battle-log:hover {
+    border-color: #2980b9;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 0 8px rgba(52, 152, 219, 0.3);
+}
+
+/* 美观的滚动条样式 - 适配多浏览器 */
+.battle-log {
+    scrollbar-width: thin;
+    scrollbar-color: #3498db #f1f1f1;
+}
+
+.battle-log::-webkit-scrollbar {
+    width: 14px;
+}
+
+.battle-log::-webkit-scrollbar-track {
+    background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.battle-log::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #3498db, #2980b9);
+    border-radius: 8px;
+    border: 2px solid #f8f9fa;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.battle-log::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #2980b9, #1f5f8b);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.battle-log::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(to bottom, #1f5f8b, #174a6b);
+}
+
+.battle-log::-webkit-scrollbar-corner {
+    background: #f8f9fa;
+}
+
+/* 滚动指示器 */
+.battle-log::after {
+    content: '';
+    position: absolute;
+    bottom: 10px;
+    right: 20px;
+    width: 8px;
+    height: 8px;
+    background: #3498db;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.battle-log.has-new-content::after {
+    opacity: 1;
+    animation: pulse-indicator 2s ease-in-out;
+}
+
+@keyframes pulse-indicator {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+/* 日志条目样式优化 */
+.battle-log .log-entry {
+    padding: 8px 12px;
+    margin: 2px 0;
+    border-radius: 4px;
+    background: rgba(52, 152, 219, 0.05);
+    border-left: 3px solid #3498db;
+    transition: all 0.2s ease;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.battle-log .log-entry:hover {
+    background: rgba(52, 152, 219, 0.1);
+    transform: translateX(2px);
+}
+
+.battle-log .log-entry:last-child {
+    background: rgba(52, 152, 219, 0.15);
+    font-weight: 500;
 }
 
 .move-item {

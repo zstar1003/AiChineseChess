@@ -29,15 +29,6 @@ def start_battle():
     black_config = data.get('black_player')
     
     try:
-        # 测试Socket.IO事件发送
-        print("测试发送thinking_stream事件...")
-        socketio.emit('thinking_stream', {
-            'player': 'red',
-            'content': '这是一个测试消息，用于验证Socket.IO连接是否正常工作。',
-            'is_complete': False
-        })
-        print("测试事件已发送")
-        
         # 创建玩家实例（传入socketio实例以支持流式输出）
         # 红方固定使用DeepSeek-R1模型
         red_player = LLMPlayer(

@@ -487,6 +487,9 @@ function initializeApp() {
     // 初始化棋盘渲染器
     window.boardRenderer = new ChessBoardRenderer('chess-board');
     
+    // 初始化滚动管理器
+    battleLogManager = new ScrollContainerManager('battle-log');
+    
     // 绑定事件监听器
     bindEventListeners();
     
@@ -519,9 +522,6 @@ function initializeSocketEvents() {
         updateConnectionStatus('已连接');
         console.log('Socket连接成功');
         console.log('Socket ID:', socket.id);
-        
-        // 连接成功后立即测试事件接收
-        console.log('测试Socket.IO事件接收...');
         
         // 连接成功后重新绑定事件监听器
         bindThinkingStreamEvent();
@@ -763,21 +763,8 @@ function updateModelSettings() {
 }
 
 function showThinkingStatus(player, message) {
-    const isRed = player.includes('OpenAI') || player.includes('o3') || player.includes('GPT');
-    const thinkingElement = document.getElementById(isRed ? 'red-thinking' : 'black-thinking');
-    
-    if (thinkingElement) {
-        thinkingElement.textContent = message;
-        thinkingElement.style.display = 'block';
-    }
-    
-    // 更新思考过程面板
-    const thinkingProcess = document.getElementById('thinking-process');
-    thinkingProcess.innerHTML = `
-        <div class="thinking-item">
-            <strong>${player}</strong>: ${message}
-        </div>
-    `;
+    // 不显示任何思考状态信息
+    return;
 }
 
 function hideThinkingStatus() {
@@ -793,25 +780,12 @@ function hideThinkingStatus() {
 
 function handleMoveMade(data) {
     console.log('收到中国象棋棋步:', data);
-    console.log('棋盘状态数据:', data.board_state);
-    console.log('当前boardRenderer:', boardRenderer);
-    
-    // 隐藏思考状态
-    hideThinkingStatus();
     
     // 更新棋盘
     if (data.board_state) {
-        console.log('开始更新棋盘...');
         boardRenderer.updateBoard(data.board_state);
-        console.log('棋盘更新完成');
-        
         boardRenderer.setLastMove(data.move);
-        console.log('最后一步设置完成:', data.move);
-        
         gameState.boardState = data.board_state;
-        console.log('游戏状态已更新');
-    } else {
-        console.error('没有收到棋盘状态数据');
     }
     
     // 更新统计信息
@@ -819,25 +793,7 @@ function handleMoveMade(data) {
     document.getElementById('total-moves').textContent = gameState.moveCount;
     document.getElementById('current-round').textContent = Math.ceil(gameState.moveCount / 2);
     
-    // 更新最后一步信息
-    const lastMoveText = `${data.player} 走了: ${data.move}`;
-    document.getElementById('last-move-text').textContent = lastMoveText;
-    
-    // 更新思考过程
-    if (data.thinking) {
-        const thinkingProcess = document.getElementById('thinking-process');
-        thinkingProcess.innerHTML = `
-            <div class="thinking-item">
-                <strong>${data.player}</strong><br>
-                <div class="thinking-content">${data.thinking}</div>
-            </div>
-        `;
-    }
-    
-    // 更新棋谱历史
-    updateMoveHistory(data.history || []);
-    
-    // 更新对战日志
+    // 只在对战日志中显示简洁的棋步记录
     addBattleLogEntry(`${data.player} 走了 ${data.move}`, 'move');
     
     // 更新对战时长
@@ -848,23 +804,7 @@ function handleGameOver(data) {
     console.log('中国象棋游戏结束:', data);
     
     gameState.isPlaying = false;
-    hideThinkingStatus();
-    console.log('对战结束');
     updateControlButtons(false);
-    
-    // 显示游戏结果
-    const gameResult = document.getElementById('game-result');
-    gameResult.innerHTML = `
-        <div class="result-info">
-            <h4>中国象棋对战结果</h4>
-            <p><strong>${data.result}</strong></p>
-            <p>总步数: ${data.total_moves}</p>
-            <p>对战时长: ${formatDuration(Date.now() - gameState.startTime)}</p>
-        </div>
-    `;
-    
-    // 添加到对战日志
-    addBattleLogEntry(`游戏结束: ${data.result}`, 'result');
     
     // 高亮获胜方
     highlightWinner(data.result);
@@ -874,12 +814,9 @@ function handleGameError(data) {
     console.error('中国象棋游戏错误:', data);
     
     gameState.isPlaying = false;
-    hideThinkingStatus();
     updateGameStatus('对战出错');
     updateControlButtons(false);
     
-    // 显示错误信息
-    addBattleLogEntry(`错误: ${data.message}`, 'error');
     alert(`对战出现错误: ${data.message}`);
 }
 
@@ -906,78 +843,208 @@ function clearGameInfo() {
     // 清空思考过程
     const thinkingProcess = document.getElementById('thinking-process');
     if (thinkingProcess) {
-        thinkingProcess.innerHTML = '<p>等待模型开始思考...</p>';
+        thinkingProcess.innerHTML = '';
     }
     
     // 清空棋谱历史
     const moveHistory = document.getElementById('move-history');
     if (moveHistory) {
-        moveHistory.innerHTML = '<p>暂无棋谱记录</p>';
+        moveHistory.innerHTML = '';
     }
     
-    // 清空对战日志
+    // 清空对战日志 - 只保留简洁的棋步记录
     const battleLog = document.getElementById('battle-log');
     if (battleLog) {
-        battleLog.innerHTML = '<p>等待对战开始...</p>';
+        battleLog.innerHTML = '';
     }
     
     // 清空游戏结果
     const gameResult = document.getElementById('game-result');
     if (gameResult) {
-        gameResult.innerHTML = '<p>对战尚未结束</p>';
+        gameResult.innerHTML = '';
     }
     
     // 重置最后一步信息
     const lastMoveText = document.getElementById('last-move-text');
     if (lastMoveText) {
-        lastMoveText.textContent = '等待开始中国象棋对战...';
+        lastMoveText.textContent = '';
     }
 }
 
 function updateMoveHistory(history) {
-    const moveHistoryElement = document.getElementById('move-history');
+    // 不显示棋谱历史信息
+    return;
+}
+
+// 滚动容器管理器
+class ScrollContainerManager {
+    constructor(containerId) {
+        this.container = document.getElementById(containerId);
+        this.isUserInteracting = false;
+        this.autoScrollEnabled = true;
+        this.scrollTimeout = null;
+        this.interactionTimeout = null;
+        this.lastScrollTop = 0;
+        
+        if (this.container) {
+            this.initializeScrollBehavior();
+        }
+    }
     
-    if (!history || history.length === 0) {
-        moveHistoryElement.innerHTML = '<p>暂无棋谱记录</p>';
+    initializeScrollBehavior() {
+        // 监听用户滚动交互
+        this.container.addEventListener('scroll', () => {
+            this.handleUserScroll();
+        });
+        
+        // 监听鼠标进入/离开
+        this.container.addEventListener('mouseenter', () => {
+            this.handleMouseEnter();
+        });
+        
+        this.container.addEventListener('mouseleave', () => {
+            this.handleMouseLeave();
+        });
+        
+        // 监听触摸事件（移动设备）
+        this.container.addEventListener('touchstart', () => {
+            this.handleUserInteraction();
+        });
+        
+        this.container.addEventListener('touchend', () => {
+            this.handleInteractionEnd();
+        });
+        
+        // 监听鼠标滚轮事件
+        this.container.addEventListener('wheel', () => {
+            this.handleUserInteraction();
+        });
+    }
+    
+    handleUserScroll() {
+        const currentScrollTop = this.container.scrollTop;
+        const maxScrollTop = this.container.scrollHeight - this.container.clientHeight;
+        
+        // 检测用户是否主动向上滚动
+        if (currentScrollTop < this.lastScrollTop && currentScrollTop < maxScrollTop - 10) {
+            this.handleUserInteraction();
+        }
+        
+        this.lastScrollTop = currentScrollTop;
+    }
+    
+    handleMouseEnter() {
+        // 鼠标进入时暂时禁用自动滚动
+        this.isUserInteracting = true;
+    }
+    
+    handleMouseLeave() {
+        // 鼠标离开时延迟恢复自动滚动
+        this.interactionTimeout = setTimeout(() => {
+            this.isUserInteracting = false;
+        }, 1000);
+    }
+    
+    handleUserInteraction() {
+        this.isUserInteracting = true;
+        
+        // 清除之前的超时
+        if (this.interactionTimeout) {
+            clearTimeout(this.interactionTimeout);
+        }
+        
+        // 3秒后恢复自动滚动
+        this.interactionTimeout = setTimeout(() => {
+            this.isUserInteracting = false;
+        }, 3000);
+    }
+    
+    handleInteractionEnd() {
+        // 触摸结束后1秒恢复自动滚动
+        this.interactionTimeout = setTimeout(() => {
+            this.isUserInteracting = false;
+        }, 1000);
+    }
+    
+    addContent(content, className = 'log-entry') {
+        const entry = document.createElement('div');
+        entry.className = className;
+        entry.textContent = content;
+        
+        // 添加内容
+        this.container.appendChild(entry);
+        
+        // 添加新内容指示器
+        this.container.classList.add('has-new-content');
+        setTimeout(() => {
+            this.container.classList.remove('has-new-content');
+        }, 2000);
+        
+        // 如果用户没有交互，则自动滚动
+        if (!this.isUserInteracting && this.autoScrollEnabled) {
+            this.smoothScrollToBottom();
+        }
+        
+        return entry;
+    }
+    
+    smoothScrollToBottom(duration = 300) {
+        const start = this.container.scrollTop;
+        const target = this.container.scrollHeight - this.container.clientHeight;
+        const distance = target - start;
+        const startTime = performance.now();
+        
+        const animateScroll = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // 使用缓动函数
+            const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+            
+            this.container.scrollTop = start + distance * easeOutCubic;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animateScroll);
+            }
+        };
+        
+        requestAnimationFrame(animateScroll);
+    }
+    
+    clear() {
+        this.container.innerHTML = '';
+    }
+    
+    setAutoScroll(enabled) {
+        this.autoScrollEnabled = enabled;
+    }
+}
+
+// 全局滚动管理器实例
+let battleLogManager = null;
+
+function addBattleLogEntry(message, type = 'info') {
+    // 只显示棋步记录，过滤其他类型的消息
+    if (type !== 'move') {
         return;
     }
     
-    let historyHtml = '';
-    history.forEach((entry, index) => {
-        const moveNumber = Math.ceil((index + 1) / 2);
-        const isRed = (index % 2) === 0;
-        
-        historyHtml += `
-            <div class="move-item">
-                <span class="move-number">${moveNumber}${isRed ? '.' : '...'}</span>
-                <span class="move-notation">${entry.move}</span>
-                <span class="move-player">(${entry.player})</span>
-            </div>
-        `;
-    });
+    // 初始化滚动管理器（如果还没有初始化）
+    if (!battleLogManager) {
+        battleLogManager = new ScrollContainerManager('battle-log');
+    }
     
-    moveHistoryElement.innerHTML = historyHtml;
-    moveHistoryElement.scrollTop = moveHistoryElement.scrollHeight;
-}
-
-function addBattleLogEntry(message, type = 'info') {
-    const battleLog = document.getElementById('battle-log');
     const timestamp = new Date().toLocaleTimeString();
-    
-    const logEntry = document.createElement('div');
-    logEntry.className = `log-entry log-${type}`;
-    logEntry.innerHTML = `
-        <div class="log-time">${timestamp}</div>
-        <div class="log-message">${message}</div>
-    `;
+    const battleLog = document.getElementById('battle-log');
     
     // 如果是第一条记录，清空默认文本
     if (battleLog.innerHTML.includes('等待对战开始')) {
         battleLog.innerHTML = '';
     }
     
-    battleLog.appendChild(logEntry);
-    battleLog.scrollTop = battleLog.scrollHeight;
+    // 使用滚动管理器添加内容
+    const content = `${timestamp} ${message}`;
+    battleLogManager.addContent(content, 'log-entry');
 }
 
 function highlightWinner(result) {

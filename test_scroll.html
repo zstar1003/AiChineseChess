@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>滚动测试</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="info-panel">
+                <div class="panel-section">
+                    <h3>游戏信息测试</h3>
+                    <div id="battle-log" class="battle-log">
+                        <p>等待对战开始...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 测试滚动功能
+        const battleLog = document.getElementById('battle-log');
+        let counter = 1;
+
+        // 每秒添加一条测试消息
+        setInterval(() => {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `${new Date().toLocaleTimeString()} 测试消息 ${counter++}`;
+            
+            // 如果是第一条消息，清空默认文本
+            if (battleLog.innerHTML.includes('等待对战开始')) {
+                battleLog.innerHTML = '';
+            }
+            
+            battleLog.appendChild(entry);
+            
+            // 自动滚动到底部
+            battleLog.scrollTop = battleLog.scrollHeight;
+        }, 1000);
+    </script>
+</body>
+</html>
