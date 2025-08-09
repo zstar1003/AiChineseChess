@@ -92,16 +92,30 @@ def run_battle():
                 'message': f'{current_player.display_name} 正在思考...'
             })
             
-            # 获取模型的下一步棋
-            print(f"正在获取 {current_player.display_name} 的棋步...")
-            move_result = current_player.get_move(
-                current_battle.game.get_board_state(),
-                current_battle.game.move_history
-            )
+            # 临时模拟棋步，跳过API调用
+            print(f"模拟 {current_player.display_name} 的棋步...")
             
-            print(f"获得棋步结果: {move_result}")
+            # 先打印当前棋盘状态和合法棋步
+            print(f"当前棋盘状态:\n{current_battle.game.get_board_unicode()}")
+            legal_moves = current_battle.game.get_legal_moves()
+            print(f"当前合法棋步: {legal_moves[:10]}...")  # 只显示前10个
             
-            if move_result and current_battle.game.make_move(move_result['move']):
+            # 模拟棋步结果 - 使用第一个合法棋步
+            if legal_moves:
+                simulated_move = legal_moves[0]  # 使用第一个合法棋步
+                move_result = {
+                    'move': simulated_move,
+                    'thinking': f'模拟思考过程：选择移动棋步 {simulated_move}',
+                    'thinking_time': 1.0,
+                    'player': current_player.display_name
+                }
+            else:
+                # 没有合法棋步，游戏结束
+                move_result = None
+            
+            print(f"模拟棋步结果: {move_result}")
+            
+            if move_result and move_result['move'] and current_battle.game.make_move(move_result['move']):
                 # 记录棋步
                 current_battle.log_move(current_player.display_name, move_result)
                 

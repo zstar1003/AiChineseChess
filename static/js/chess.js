@@ -357,19 +357,29 @@ class ChessBoardRenderer {
     }
     
     updateBoard(boardState) {
-        if (!boardState) return;
+        console.log('updateBoard被调用，棋盘状态:', boardState);
+        
+        if (!boardState) {
+            console.error('棋盘状态为空');
+            return;
+        }
         
         // 清空棋盘并重绘
+        console.log('开始重绘棋盘...');
         this.drawBoard();
+        console.log('棋盘重绘完成');
         
         // 解析棋盘状态
         const rows = boardState.split('/');
+        console.log('解析后的行数据:', rows);
         
         for (let row = 0; row < 10; row++) {
             if (rows[row]) {
+                console.log(`处理第${row}行: ${rows[row]}`);
                 for (let col = 0; col < 9; col++) {
                     const piece = rows[row][col];
                     if (piece && piece !== '.') {
+                        console.log(`在位置(${col}, ${row})绘制棋子: ${piece}`);
                         this.drawPiece(col, row, piece);
                     }
                 }
@@ -378,8 +388,11 @@ class ChessBoardRenderer {
         
         // 高亮最后一步
         if (this.lastMove) {
+            console.log('高亮最后一步:', this.lastMove);
             this.highlightMove(this.lastMove);
         }
+        
+        console.log('棋盘更新完成');
     }
     
     drawPiece(col, row, piece) {
@@ -768,21 +781,37 @@ function showThinkingStatus(player, message) {
 }
 
 function hideThinkingStatus() {
-    document.getElementById('red-thinking').style.display = 'none';
-    document.getElementById('black-thinking').style.display = 'none';
+    const redThinking = document.getElementById('red-thinking');
+    const blackThinking = document.getElementById('black-thinking');
+    if (redThinking) {
+        redThinking.style.display = 'none';
+    }
+    if (blackThinking) {
+        blackThinking.style.display = 'none';
+    }
 }
 
 function handleMoveMade(data) {
     console.log('收到中国象棋棋步:', data);
+    console.log('棋盘状态数据:', data.board_state);
+    console.log('当前boardRenderer:', boardRenderer);
     
     // 隐藏思考状态
     hideThinkingStatus();
     
     // 更新棋盘
     if (data.board_state) {
+        console.log('开始更新棋盘...');
         boardRenderer.updateBoard(data.board_state);
+        console.log('棋盘更新完成');
+        
         boardRenderer.setLastMove(data.move);
+        console.log('最后一步设置完成:', data.move);
+        
         gameState.boardState = data.board_state;
+        console.log('游戏状态已更新');
+    } else {
+        console.error('没有收到棋盘状态数据');
     }
     
     // 更新统计信息
