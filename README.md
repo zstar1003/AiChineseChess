@@ -131,3 +131,7 @@ python app.py
 - `.chess-board` - 棋盘容器
 - `.chess-piece` - 棋子样式
 - `.thinking-content` - 思考框样式
+
+## 许可证
+
+本项目采用 [Apache License 2.0](LICENSE)。第三方依赖和素材（如有）仍适用各自的许可条款。
